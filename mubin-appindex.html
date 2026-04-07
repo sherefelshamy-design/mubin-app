@@ -1,0 +1,1690 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Mubin">
+<meta name="application-name" content="Mubin">
+<meta name="theme-color" content="#0d1f1a">
+<meta name="description" content="Live AI translation for Friday Jumu'ah sermons">
+<title>Mubin — مُبين</title>
+<style>
+/* ── RESET & TOKENS ──────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --forest:    #0d1f1a;
+  --forest2:   #162d26;
+  --forest3:   #1e3d34;
+  --sage:      #2e5e4e;
+  --mint:      #3d8c6e;
+  --emerald:   #52b78a;
+  --glow:      #7de0b0;
+  --cream:     #f5f0e8;
+  --warm:      #e8dfc8;
+  --gold:      #c9a84c;
+  --gold2:     #e8c97a;
+  --red:       #c0392b;
+  --red2:      #e74c3c;
+  --text-1:    #f0ede6;
+  --text-2:    #b8b4aa;
+  --text-3:    #7a7770;
+  --font-latin:  -apple-system, 'Helvetica Neue', Arial, sans-serif;
+  --font-serif:  Georgia, 'Times New Roman', serif;
+  --font-arabic: -apple-system, 'Helvetica Neue', Arial, sans-serif;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bot: env(safe-area-inset-bottom, 0px);
+}
+
+html, body {
+  height: 100%;
+  background: var(--forest);
+  color: var(--text-1);
+  font-family: var(--font-latin);
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+}
+
+/* ── SCREENS ─────────────────────────────────────────────────────────────── */
+.screen {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.4s ease;
+}
+.screen.active {
+  opacity: 1;
+  pointer-events: all;
+}
+
+/* ── SCREEN: SPLASH ──────────────────────────────────────────────────────── */
+#splash {
+  align-items: center;
+  justify-content: center;
+  background: var(--forest);
+  gap: 0;
+}
+
+.splash-symbol {
+  font-family: var(--font-arabic);
+  font-size: 72px;
+  color: var(--emerald);
+  margin-bottom: 8px;
+  animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-6px); }
+}
+
+.splash-name {
+  font-family: var(--font-serif);
+  font-size: 42px;
+  font-weight: 600;
+  letter-spacing: -1px;
+  color: var(--cream);
+}
+
+.splash-name span {
+  color: var(--emerald);
+}
+
+.splash-tagline {
+  font-size: 13px;
+  color: var(--text-3);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-top: 6px;
+  font-weight: 300;
+}
+
+.splash-bar {
+  width: 48px;
+  height: 2px;
+  background: var(--emerald);
+  margin-top: 32px;
+  border-radius: 2px;
+  animation: grow 2.2s ease forwards;
+}
+
+@keyframes grow {
+  from { width: 0; opacity: 0; }
+  to   { width: 48px; opacity: 1; }
+}
+
+/* ── SCREEN: ROLE SELECT ─────────────────────────────────────────────────── */
+#role-select {
+  padding: calc(var(--safe-top) + 60px) 28px calc(var(--safe-bot) + 40px);
+  justify-content: space-between;
+}
+
+.role-header {
+  text-align: center;
+}
+
+.role-header h1 {
+  font-family: var(--font-serif);
+  font-size: 32px;
+  font-weight: 600;
+  color: var(--cream);
+  line-height: 1.2;
+}
+
+.role-header p {
+  font-size: 14px;
+  color: var(--text-2);
+  margin-top: 10px;
+  line-height: 1.6;
+  font-weight: 300;
+}
+
+.role-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.role-card {
+  background: var(--forest2);
+  border: 1px solid var(--forest3);
+  border-radius: 20px;
+  padding: 28px 24px;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+  position: relative;
+  overflow: hidden;
+}
+
+.role-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, transparent 60%, rgba(82,183,138,0.06));
+  transition: opacity 0.3s;
+  opacity: 0;
+}
+
+.role-card:active::before, .role-card:hover::before { opacity: 1; }
+
+.role-card:active { transform: scale(0.98); }
+
+.role-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.role-icon svg {
+  width: 26px;
+  height: 26px;
+}
+
+.role-card.volunteer .role-icon {
+  background: rgba(82,183,138,0.15);
+  border: 1px solid rgba(82,183,138,0.3);
+  color: var(--emerald);
+}
+
+.role-card.listener .role-icon {
+  background: rgba(201,168,76,0.15);
+  border: 1px solid rgba(201,168,76,0.3);
+  color: var(--gold);
+}
+
+.role-info h3 {
+  font-size: 18px;
+  font-weight: 500;
+  color: var(--text-1);
+  margin-bottom: 5px;
+}
+
+.role-info p {
+  font-size: 13px;
+  color: var(--text-2);
+  line-height: 1.5;
+  font-weight: 300;
+}
+
+.role-badge {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  font-size: 10px;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+}
+
+.role-card.volunteer .role-badge {
+  background: rgba(82,183,138,0.15);
+  color: var(--emerald);
+}
+
+.role-card.listener .role-badge {
+  background: rgba(201,168,76,0.12);
+  color: var(--gold);
+}
+
+/* ── SCREEN: VOLUNTEER SETUP ─────────────────────────────────────────────── */
+#volunteer-setup {
+  padding: calc(var(--safe-top) + 20px) 0 calc(var(--safe-bot) + 20px);
+  overflow-y: auto;
+}
+
+.nav-bar {
+  display: flex;
+  align-items: center;
+  padding: 12px 20px;
+  gap: 12px;
+}
+
+.back-btn {
+  width: 38px;
+  height: 38px;
+  background: var(--forest2);
+  border: 1px solid var(--forest3);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--text-2);
+  transition: all 0.2s;
+}
+
+.back-btn:active { opacity: 0.7; transform: scale(0.95); }
+
+.nav-title {
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--text-1);
+}
+
+.setup-content {
+  padding: 20px 24px 40px;
+}
+
+.setup-section {
+  margin-bottom: 32px;
+}
+
+.setup-label {
+  font-size: 11px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--text-3);
+  margin-bottom: 12px;
+  font-weight: 500;
+}
+
+.setup-input {
+  width: 100%;
+  background: var(--forest2);
+  border: 1px solid var(--forest3);
+  border-radius: 12px;
+  padding: 14px 16px;
+  color: var(--text-1);
+  font-size: 16px;
+  font-family: var(--font-latin);
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.setup-input:focus {
+  border-color: var(--sage);
+}
+
+.setup-input::placeholder { color: var(--text-3); }
+
+/* Instructions card */
+.instructions-card {
+  background: var(--forest2);
+  border: 1px solid var(--forest3);
+  border-left: 3px solid var(--emerald);
+  border-radius: 12px;
+  padding: 18px;
+}
+
+.instruction-row {
+  display: flex;
+  gap: 14px;
+  margin-bottom: 14px;
+  align-items: flex-start;
+}
+
+.instruction-row:last-child { margin-bottom: 0; }
+
+.inst-num {
+  width: 22px;
+  height: 22px;
+  background: rgba(82,183,138,0.15);
+  border: 1px solid rgba(82,183,138,0.3);
+  border-radius: 50%;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--emerald);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.inst-text {
+  font-size: 13px;
+  color: var(--text-2);
+  line-height: 1.6;
+}
+
+.inst-text strong {
+  color: var(--text-1);
+  font-weight: 500;
+}
+
+/* Location status */
+.location-status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  background: var(--forest2);
+  border: 1px solid var(--forest3);
+  border-radius: 12px;
+  font-size: 13px;
+  color: var(--text-2);
+}
+
+.loc-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.loc-dot.acquiring { background: var(--gold); animation: blink 1.2s ease-in-out infinite; }
+.loc-dot.acquired  { background: var(--emerald); }
+.loc-dot.error     { background: var(--red2); }
+
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+.primary-btn {
+  width: 100%;
+  padding: 16px;
+  background: var(--emerald);
+  color: var(--forest);
+  border: none;
+  border-radius: 14px;
+  font-size: 16px;
+  font-weight: 500;
+  font-family: var(--font-latin);
+  cursor: pointer;
+  transition: all 0.2s;
+  letter-spacing: 0.2px;
+}
+
+.primary-btn:active { transform: scale(0.98); opacity: 0.9; }
+.primary-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+/* ── SCREEN: VOLUNTEER LIVE ──────────────────────────────────────────────── */
+#volunteer-live {
+  padding-top: calc(var(--safe-top) + 20px);
+  padding-bottom: calc(var(--safe-bot) + 20px);
+}
+
+.live-header {
+  padding: 12px 20px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.live-indicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(192,57,43,0.15);
+  border: 1px solid rgba(231,76,60,0.3);
+  padding: 6px 12px;
+  border-radius: 20px;
+}
+
+.live-dot-red {
+  width: 7px;
+  height: 7px;
+  background: var(--red2);
+  border-radius: 50%;
+  animation: blink 1s ease-in-out infinite;
+}
+
+.live-indicator span {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--red2);
+  letter-spacing: 1px;
+}
+
+.session-timer {
+  font-size: 20px;
+  font-weight: 300;
+  color: var(--text-2);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 1px;
+}
+
+/* Waveform visualiser */
+.waveform-wrap {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 32px;
+  padding: 0 24px;
+}
+
+.waveform {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  height: 64px;
+}
+
+.wave-bar {
+  width: 4px;
+  background: var(--emerald);
+  border-radius: 2px;
+  transition: height 0.1s ease;
+}
+
+.signal-card {
+  width: 100%;
+  background: var(--forest2);
+  border: 1px solid var(--forest3);
+  border-radius: 16px;
+  padding: 20px;
+}
+
+.signal-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.signal-row:last-child { margin-bottom: 0; }
+
+.signal-key {
+  font-size: 12px;
+  color: var(--text-3);
+  font-weight: 300;
+}
+
+.signal-val {
+  font-size: 14px;
+  color: var(--text-1);
+  font-weight: 500;
+}
+
+.signal-val.good  { color: var(--emerald); }
+.signal-val.weak  { color: var(--gold); }
+.signal-val.lost  { color: var(--red2); }
+
+.signal-warning {
+  background: rgba(201,168,76,0.1);
+  border: 1px solid rgba(201,168,76,0.25);
+  border-radius: 10px;
+  padding: 12px 14px;
+  font-size: 12px;
+  color: var(--gold2);
+  margin-top: 12px;
+  display: none;
+  line-height: 1.5;
+}
+
+.signal-warning.visible { display: block; }
+
+.end-btn {
+  margin: 0 24px;
+  padding: 14px;
+  background: transparent;
+  border: 1px solid rgba(192,57,43,0.4);
+  border-radius: 14px;
+  color: var(--red2);
+  font-size: 15px;
+  font-family: var(--font-latin);
+  font-weight: 400;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.end-btn:active { background: rgba(192,57,43,0.1); }
+
+/* ── SCREEN: LANG SELECT ─────────────────────────────────────────────────── */
+#lang-select {
+  padding: calc(var(--safe-top) + 20px) 0 calc(var(--safe-bot) + 20px);
+}
+
+.lang-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  padding: 20px 24px 32px;
+  flex: 1;
+  overflow-y: auto;
+}
+
+.lang-item {
+  background: var(--forest2);
+  border: 1px solid var(--forest3);
+  border-radius: 14px;
+  padding: 18px 16px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.lang-item:active { transform: scale(0.97); }
+
+.lang-item.selected {
+  border-color: var(--emerald);
+  background: rgba(82,183,138,0.08);
+}
+
+.lang-native {
+  font-size: 17px;
+  color: var(--text-1);
+  font-weight: 500;
+}
+
+.lang-english {
+  font-size: 11px;
+  color: var(--text-3);
+  font-weight: 300;
+}
+
+/* ── SCREEN: LISTENER CAPTION ────────────────────────────────────────────── */
+#caption-view {
+  display: flex;
+  flex-direction: column;
+  padding-top: calc(var(--safe-top) + 0px);
+  padding-bottom: calc(var(--safe-bot) + 0px);
+}
+
+.caption-header {
+  padding: 14px 20px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+
+.mosque-info h4 {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-1);
+}
+
+.mosque-info p {
+  font-size: 11px;
+  color: var(--text-3);
+  margin-top: 1px;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.live-pill {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(192,57,43,0.15);
+  border: 1px solid rgba(231,76,60,0.25);
+  padding: 4px 10px;
+  border-radius: 20px;
+}
+
+.live-pill span {
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--red2);
+  letter-spacing: 0.5px;
+}
+
+.lang-btn {
+  background: var(--forest2);
+  border: 1px solid var(--forest3);
+  border-radius: 8px;
+  padding: 5px 10px;
+  font-size: 12px;
+  color: var(--text-2);
+  cursor: pointer;
+  font-family: var(--font-latin);
+}
+
+/* Caption area */
+.caption-area {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px 22px 16px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 0;
+}
+
+.caption-area::-webkit-scrollbar { display: none; }
+
+.segment-block {
+  margin-bottom: 28px;
+  animation: fadeUp 0.4s ease forwards;
+  opacity: 0;
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.segment-block.old .segment-text {
+  color: var(--text-3);
+  font-size: 16px;
+}
+
+.segment-text {
+  font-family: var(--font-serif);
+  font-size: 20px;
+  line-height: 1.75;
+  color: var(--text-1);
+  font-weight: 400;
+}
+
+.segment-arabic {
+  margin-top: 8px;
+  font-family: var(--font-arabic);
+  font-size: 13px;
+  color: var(--text-3);
+  direction: rtl;
+  text-align: right;
+  line-height: 1.8;
+}
+
+.partial-text {
+  font-family: var(--font-serif);
+  font-size: 18px;
+  line-height: 1.7;
+  color: var(--text-2);
+  font-style: italic;
+  margin-bottom: 8px;
+  min-height: 28px;
+}
+
+/* Waiting states */
+.waiting-state {
+  text-align: center;
+  padding: 40px 0;
+}
+
+.waiting-icon {
+  width: 56px;
+  height: 56px;
+  background: var(--forest2);
+  border: 1px solid var(--forest3);
+  border-radius: 16px;
+  margin: 0 auto 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--emerald);
+}
+
+.waiting-state h3 {
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--text-1);
+  margin-bottom: 6px;
+}
+
+.waiting-state p {
+  font-size: 13px;
+  color: var(--text-3);
+  line-height: 1.6;
+}
+
+/* Caption footer controls */
+.caption-footer {
+  border-top: 1px solid rgba(255,255,255,0.06);
+  padding: 14px 20px calc(var(--safe-bot) + 14px);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.audio-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.toggle-track {
+  width: 40px;
+  height: 24px;
+  background: var(--forest3);
+  border-radius: 12px;
+  position: relative;
+  cursor: pointer;
+  transition: background 0.2s;
+  flex-shrink: 0;
+}
+
+.toggle-track.on { background: var(--sage); }
+
+.toggle-knob {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 18px;
+  height: 18px;
+  background: var(--text-2);
+  border-radius: 50%;
+  transition: all 0.2s;
+}
+
+.toggle-track.on .toggle-knob {
+  left: 19px;
+  background: var(--glow);
+}
+
+.audio-label {
+  font-size: 12px;
+  color: var(--text-2);
+}
+
+.font-controls {
+  display: flex;
+  gap: 6px;
+}
+
+.font-btn {
+  background: var(--forest2);
+  border: 1px solid var(--forest3);
+  border-radius: 8px;
+  padding: 6px 10px;
+  color: var(--text-2);
+  cursor: pointer;
+  font-family: var(--font-serif);
+  transition: all 0.2s;
+}
+
+.font-btn:active { background: var(--forest3); }
+.font-btn.active-size { border-color: var(--sage); color: var(--emerald); }
+
+.delay-info {
+  text-align: right;
+}
+
+.delay-label {
+  font-size: 10px;
+  color: var(--text-3);
+}
+
+.delay-val {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text-1);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── TOAST ───────────────────────────────────────────────────────────────── */
+.toast {
+  position: fixed;
+  bottom: calc(var(--safe-bot) + 100px);
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: var(--forest3);
+  border: 1px solid var(--sage);
+  color: var(--text-1);
+  padding: 10px 20px;
+  border-radius: 20px;
+  font-size: 13px;
+  white-space: nowrap;
+  opacity: 0;
+  transition: all 0.3s ease;
+  pointer-events: none;
+  z-index: 999;
+}
+
+.toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+/* ── CONNECTING OVERLAY ──────────────────────────────────────────────────── */
+.connecting {
+  position: fixed;
+  inset: 0;
+  background: rgba(13,31,26,0.85);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  z-index: 900;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s;
+}
+
+.connecting.show {
+  opacity: 1;
+  pointer-events: all;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 2px solid var(--forest3);
+  border-top-color: var(--emerald);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.connecting p {
+  font-size: 14px;
+  color: var(--text-2);
+}
+
+/* ── FONT SIZE VARIANTS ──────────────────────────────────────────────────── */
+body.font-sm .segment-text { font-size: 16px; }
+body.font-md .segment-text { font-size: 20px; }
+body.font-lg .segment-text { font-size: 24px; }
+</style>
+</head>
+<body class="font-md">
+
+<!-- ── SPLASH ────────────────────────────────────────────────────────────── -->
+<div class="screen active" id="splash">
+  <div class="splash-symbol">م</div>
+  <div class="splash-name">Mu<span>bin</span></div>
+  <div class="splash-tagline">Live sermon translation</div>
+  <div class="splash-bar"></div>
+</div>
+
+<!-- ── ROLE SELECT ────────────────────────────────────────────────────────── -->
+<div class="screen" id="role-select">
+  <div class="role-header" style="padding: 0 28px">
+    <h1>Friday<br>Prayer</h1>
+    <p>Help break the language barrier.<br>Choose your role for today's Jumu'ah.</p>
+  </div>
+  <div class="role-cards">
+    <div class="role-card volunteer" onclick="goToVolunteerSetup()">
+      <div class="role-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+          <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+          <path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v4M8 23h8"/>
+        </svg>
+      </div>
+      <div class="role-info">
+        <h3>Be the mic</h3>
+        <p>Volunteer to stream audio for nearby worshippers. Sit near the front rows.</p>
+      </div>
+      <div class="role-badge">1 needed</div>
+    </div>
+    <div class="role-card listener" onclick="goToLangSelect()">
+      <div class="role-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round">
+          <path d="M3 18v-6a9 9 0 0 1 18 0v6"/>
+          <path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"/>
+        </svg>
+      </div>
+      <div class="role-info">
+        <h3>Listen &amp; read</h3>
+        <p>Follow the sermon in your language. Live captions and audio translation.</p>
+      </div>
+      <div class="role-badge">Join session</div>
+    </div>
+  </div>
+  <p style="text-align:center;font-size:11px;color:var(--text-3);padding:0 24px">
+    Your location is used only to find the nearest session.<br>Audio is never recorded or stored.
+  </p>
+</div>
+
+<!-- ── VOLUNTEER SETUP ───────────────────────────────────────────────────── -->
+<div class="screen" id="volunteer-setup">
+  <div class="nav-bar">
+    <div class="back-btn" onclick="showScreen('role-select')">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M15 18l-6-6 6-6"/></svg>
+    </div>
+    <div class="nav-title">Volunteer setup</div>
+  </div>
+  <div class="setup-content">
+    <div class="setup-section">
+      <div class="setup-label">Your name (optional)</div>
+      <input class="setup-input" id="volunteer-name" type="text" placeholder="e.g. Abdullah" maxlength="40">
+    </div>
+
+    <div class="setup-section">
+      <div class="setup-label">Mosque name (optional)</div>
+      <input class="setup-input" id="mosque-name" type="text" placeholder="e.g. Jumeirah Mosque" maxlength="80">
+    </div>
+
+    <div class="setup-section">
+      <div class="setup-label">How to get the best audio</div>
+      <div class="instructions-card">
+        <div class="instruction-row">
+          <div class="inst-num">1</div>
+          <div class="inst-text"><strong>Sit near the front rows</strong> — closer to the Sheikh means clearer audio.</div>
+        </div>
+        <div class="instruction-row">
+          <div class="inst-num">2</div>
+          <div class="inst-text"><strong>Place phone face-up on a flat surface</strong> — a prayer mat, floor, or shelf.</div>
+        </div>
+        <div class="instruction-row">
+          <div class="inst-num">3</div>
+          <div class="inst-text"><strong>Keep the screen on</strong> — don't lock your phone during the sermon.</div>
+        </div>
+        <div class="instruction-row">
+          <div class="inst-num">4</div>
+          <div class="inst-text"><strong>Stay still</strong> — avoid moving the phone once the sermon begins.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="setup-section">
+      <div class="setup-label">Your location</div>
+      <div class="location-status" id="vol-loc-status">
+        <div class="loc-dot acquiring" id="vol-loc-dot"></div>
+        <span id="vol-loc-text">Acquiring GPS location…</span>
+      </div>
+    </div>
+
+    <button class="primary-btn" id="start-session-btn" disabled onclick="startVolunteerSession()">
+      Start session
+    </button>
+  </div>
+</div>
+
+<!-- ── VOLUNTEER LIVE ─────────────────────────────────────────────────────── -->
+<div class="screen" id="volunteer-live">
+  <div class="live-header">
+    <div class="live-indicator">
+      <div class="live-dot-red"></div>
+      <span>LIVE</span>
+    </div>
+    <div class="session-timer" id="session-timer">0:00</div>
+  </div>
+
+  <div class="waveform-wrap">
+    <div class="waveform" id="waveform">
+      <!-- bars injected by JS -->
+    </div>
+
+    <div class="signal-card">
+      <div class="signal-row">
+        <span class="signal-key">Signal quality</span>
+        <span class="signal-val good" id="signal-quality-val">Good</span>
+      </div>
+      <div class="signal-row">
+        <span class="signal-key">Listeners nearby</span>
+        <span class="signal-val" id="listener-count-val">0</span>
+      </div>
+      <div class="signal-row">
+        <span class="signal-key">Languages active</span>
+        <span class="signal-val" id="languages-val">—</span>
+      </div>
+      <div class="signal-row">
+        <span class="signal-key">Segments translated</span>
+        <span class="signal-val" id="segments-val">0</span>
+      </div>
+      <div class="signal-warning" id="signal-warning"></div>
+    </div>
+  </div>
+
+  <button class="end-btn" onclick="confirmEndSession()">End mic session</button>
+</div>
+
+<!-- ── LANGUAGE SELECT ────────────────────────────────────────────────────── -->
+<div class="screen" id="lang-select">
+  <div class="nav-bar">
+    <div class="back-btn" onclick="showScreen('role-select')">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M15 18l-6-6 6-6"/></svg>
+    </div>
+    <div class="nav-title">Select your language</div>
+  </div>
+  <div class="lang-grid" id="lang-grid">
+    <!-- injected by JS -->
+  </div>
+  <div style="padding: 0 24px 8px">
+    <button class="primary-btn" id="confirm-lang-btn" onclick="confirmLanguage()">Continue</button>
+  </div>
+</div>
+
+<!-- ── CAPTION VIEW ───────────────────────────────────────────────────────── -->
+<div class="screen" id="caption-view">
+  <div class="caption-header">
+    <div class="mosque-info">
+      <h4 id="caption-mosque-name">Connecting…</h4>
+      <p id="caption-location">Finding nearest session</p>
+    </div>
+    <div class="header-right">
+      <div class="live-pill" id="live-pill" style="display:none">
+        <div class="live-dot-red"></div>
+        <span>LIVE</span>
+      </div>
+      <button class="lang-btn" onclick="changeLanguage()" id="lang-switch-btn">EN</button>
+    </div>
+  </div>
+
+  <div class="caption-area" id="caption-area">
+    <div class="waiting-state" id="waiting-state">
+      <div class="waiting-icon">
+        <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      </div>
+      <h3>Waiting for session</h3>
+      <p>The volunteer mic hasn't started yet.<br>You'll see captions appear here shortly.</p>
+    </div>
+    <div class="partial-text" id="partial-display"></div>
+  </div>
+
+  <div class="caption-footer">
+    <div class="audio-toggle" onclick="toggleAudio()">
+      <div class="toggle-track" id="audio-toggle-track">
+        <div class="toggle-knob"></div>
+      </div>
+      <span class="audio-label" id="audio-label">Audio off</span>
+    </div>
+    <div class="font-controls">
+      <button class="font-btn" data-size="sm" onclick="setFontSize('sm')">A</button>
+      <button class="font-btn active-size" data-size="md" onclick="setFontSize('md')">A</button>
+      <button class="font-btn" data-size="lg" style="font-size:18px" onclick="setFontSize('lg')">A</button>
+    </div>
+    <div class="delay-info">
+      <div class="delay-label">Delay</div>
+      <div class="delay-val" id="delay-val">—</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── TOAST ──────────────────────────────────────────────────────────────── -->
+<div class="toast" id="toast"></div>
+
+<!-- ── CONNECTING OVERLAY ─────────────────────────────────────────────────── -->
+<div class="connecting" id="connecting">
+  <div class="spinner"></div>
+  <p id="connecting-text">Finding session…</p>
+</div>
+
+<script>
+// ── GLOBAL ERROR HANDLER — catches all uncaught errors ────────────────────────
+window.onerror = function(msg, src, line, col, err) {
+  const box = document.createElement('div');
+  box.style.cssText = 'position:fixed;bottom:0;left:0;right:0;background:#7b1a1a;color:#fff;font-family:monospace;font-size:12px;padding:12px 16px;z-index:9999;white-space:pre-wrap;word-break:break-all';
+  box.textContent = 'Error: ' + msg + '\nLine: ' + line + ' Col: ' + col + (src ? '\nFile: ' + src.split('/').pop() : '');
+  document.body.appendChild(box);
+  return false;
+};
+window.addEventListener('unhandledrejection', function(e) {
+  const box = document.createElement('div');
+  box.style.cssText = 'position:fixed;bottom:0;left:0;right:0;background:#7b1a1a;color:#fff;font-family:monospace;font-size:12px;padding:12px 16px;z-index:9999;word-break:break-all';
+  box.textContent = 'Unhandled Promise: ' + (e.reason?.message || String(e.reason));
+  document.body.appendChild(box);
+});
+
+// ── CONFIG ───────────────────────────────────────────────────────────────────
+const SERVER_URL = window.location.hostname === 'localhost'
+  ? 'ws://localhost:8080'
+  : 'wss://mubin-server-production-ae55.up.railway.app'; // replace with your production URL
+
+// Fix: build API_URL correctly regardless of ws/wss prefix
+const API_URL = SERVER_URL.startsWith('wss')
+  ? 'https' + SERVER_URL.slice(3)
+  : 'http'  + SERVER_URL.slice(2);
+
+// ── STATE ────────────────────────────────────────────────────────────────────
+let state = {
+  role: null,           // 'volunteer' | 'listener'
+  lang: 'en',
+  sessionId: null,
+  ws: null,
+  gps: null,
+  timerInterval: null,
+  sessionStart: null,
+  segmentCount: 0,
+  audioEnabled: false,
+  mediaStream: null,
+  mediaRecorder: null,
+  waveAnimFrame: null,
+  analyser: null,
+};
+
+// ── WAKELOCK (keeps screen on for volunteer) ──────────────────────────────────
+let wakeLock = null;
+
+async function requestWakeLock() {
+  if (!('wakeLock' in navigator)) return;
+  try {
+    wakeLock = await navigator.wakeLock.request('screen');
+    wakeLock.addEventListener('release', () => { wakeLock = null; });
+  } catch (_) {}
+}
+
+async function releaseWakeLock() {
+  if (wakeLock) {
+    try { await wakeLock.release(); } catch (_) {}
+    wakeLock = null;
+  }
+}
+
+// Re-acquire WakeLock when tab becomes visible (state is now declared above)
+document.addEventListener('visibilitychange', async () => {
+  if (document.visibilityState === 'visible' && state.role === 'volunteer') {
+    await requestWakeLock();
+  }
+});
+
+// ── PWA SERVICE WORKER (only register when served over HTTP/HTTPS) ────────────
+if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  });
+}
+
+const LANGUAGES = [
+  { code: 'en', native: 'English',    english: 'English'    },
+  { code: 'ur', native: 'اردو',       english: 'Urdu'       },
+  { code: 'fr', native: 'Français',   english: 'French'     },
+  { code: 'hi', native: 'हिन्दी',      english: 'Hindi'      },
+  { code: 'id', native: 'Indonesia',  english: 'Indonesian' },
+  { code: 'tr', native: 'Türkçe',     english: 'Turkish'    },
+  { code: 'ms', native: 'Melayu',     english: 'Malay'      },
+  { code: 'bn', native: 'বাংলা',       english: 'Bengali'    },
+  { code: 'de', native: 'Deutsch',    english: 'German'     },
+  { code: 'es', native: 'Español',    english: 'Spanish'    },
+  { code: 'ru', native: 'Русский',    english: 'Russian'    },
+  { code: 'sw', native: 'Kiswahili',  english: 'Swahili'    },
+];
+
+// ── NAVIGATION ────────────────────────────────────────────────────────────────
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+
+function showConnecting(text) {
+  document.getElementById('connecting-text').textContent = text || 'Connecting…';
+  document.getElementById('connecting').classList.add('show');
+}
+
+function hideConnecting() {
+  document.getElementById('connecting').classList.remove('show');
+}
+
+function showToast(msg, duration = 3000) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), duration);
+}
+
+// ── SPLASH → ROLE SELECT ──────────────────────────────────────────────────────
+setTimeout(() => showScreen('role-select'), 2200);
+
+// ── VOLUNTEER FLOW ────────────────────────────────────────────────────────────
+function goToVolunteerSetup() {
+  showScreen('volunteer-setup');
+  acquireLocation('volunteer');
+}
+
+let volunteerGPS = null;
+
+function acquireLocation(who) {
+  const dotId = who === 'volunteer' ? 'vol-loc-dot' : null;
+  const textId = who === 'volunteer' ? 'vol-loc-text' : null;
+  const btn = document.getElementById('start-session-btn');
+
+  if (!navigator.geolocation) {
+    if (textId) document.getElementById(textId).textContent = 'GPS not available on this device';
+    return;
+  }
+
+  navigator.geolocation.getCurrentPosition(
+    (pos) => {
+      volunteerGPS = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+      if (dotId)  { document.getElementById(dotId).className  = 'loc-dot acquired'; }
+      if (textId) { document.getElementById(textId).textContent = `Location acquired (${volunteerGPS.lat.toFixed(4)}, ${volunteerGPS.lng.toFixed(4)})`; }
+      if (btn) btn.disabled = false;
+    },
+    (err) => {
+      if (dotId)  { document.getElementById(dotId).className  = 'loc-dot error'; }
+      if (textId) { document.getElementById(textId).textContent = 'Could not get location. Please enable GPS.'; }
+    },
+    { enableHighAccuracy: true, timeout: 12000 }
+  );
+}
+
+async function startVolunteerSession() {
+  if (!volunteerGPS) { showToast('Waiting for GPS location…'); return; }
+
+  showConnecting('Creating session…');
+
+  const name    = document.getElementById('volunteer-name').value.trim() || 'Volunteer';
+  const mosque  = document.getElementById('mosque-name').value.trim()    || 'Local Mosque';
+
+  const url = `${SERVER_URL}/ws/new-session?lat=${volunteerGPS.lat}&lng=${volunteerGPS.lng}&mosque=${encodeURIComponent(mosque)}&name=${encodeURIComponent(name)}`;
+
+  try {
+    await connectVolunteer(url, mosque, name);
+  } catch (err) {
+    hideConnecting();
+    showToast('Could not connect. Check your internet and try again.');
+  }
+}
+
+async function connectVolunteer(url, mosque, name) {
+  return new Promise((resolve, reject) => {
+    const ws = new WebSocket(url);
+    state.ws = ws;
+
+    ws.onopen = () => {};
+
+    ws.onmessage = async (ev) => {
+      const msg = JSON.parse(ev.data);
+      switch (msg.type) {
+        case 'session_created':
+        case 'source_connected':
+          state.sessionId = msg.session_id;
+          state.role = 'volunteer';
+          hideConnecting();
+          showScreen('volunteer-live');
+          startSessionTimer();
+          buildWaveform();
+          await requestWakeLock(); // keep screen on
+          await startMicStream();
+          resolve();
+          break;
+        case 'listener_update':
+          document.getElementById('listener-count-val').textContent = msg.listeners;
+          document.getElementById('languages-val').textContent = msg.languages?.join(', ') || '—';
+          break;
+        case 'signal_warning':
+          showSignalWarning(msg.level, msg.message);
+          break;
+        case 'error':
+          hideConnecting();
+          showToast(msg.message);
+          reject(new Error(msg.message));
+          break;
+        case 'heartbeat_ack':
+          break;
+      }
+    };
+
+    ws.onerror = () => reject(new Error('WebSocket error'));
+
+    ws.onclose = () => {
+      stopMicStream();
+      clearInterval(state.timerInterval);
+    };
+
+    // Heartbeat
+    setInterval(() => {
+      if (ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({ type: 'heartbeat' }));
+      }
+    }, 10000);
+  });
+}
+
+// ── MIC STREAMING ────────────────────────────────────────────────────────────
+async function startMicStream() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: {
+      sampleRate: 16000,
+      channelCount: 1,
+      echoCancellation: false,
+      noiseSuppression: false,
+      autoGainControl: true,
+    }});
+
+    state.mediaStream = stream;
+
+    // Waveform analyser
+    const ctx = new AudioContext({ sampleRate: 16000 });
+    const src = ctx.createMediaStreamSource(stream);
+    const analyser = ctx.createAnalyser();
+    analyser.fftSize = 64;
+    src.connect(analyser);
+    state.analyser = analyser;
+    animateWaveform();
+
+    // Stream audio chunks via MediaRecorder
+    const recorder = new MediaRecorder(stream, { mimeType: 'audio/webm;codecs=opus' });
+    state.mediaRecorder = recorder;
+
+    recorder.ondataavailable = async (ev) => {
+      if (ev.data.size > 0 && state.ws?.readyState === WebSocket.OPEN) {
+        // Convert to ArrayBuffer and send
+        const buf = await ev.data.arrayBuffer();
+        state.ws.send(buf);
+      }
+    };
+
+    recorder.start(250); // 250ms chunks
+
+  } catch (err) {
+    showToast('Microphone access denied. Please allow mic access and try again.');
+  }
+}
+
+function stopMicStream() {
+  state.mediaRecorder?.stop();
+  state.mediaStream?.getTracks().forEach(t => t.stop());
+  cancelAnimationFrame(state.waveAnimFrame);
+}
+
+// ── WAVEFORM VISUALISER ───────────────────────────────────────────────────────
+function buildWaveform() {
+  const el = document.getElementById('waveform');
+  el.innerHTML = '';
+  for (let i = 0; i < 22; i++) {
+    const bar = document.createElement('div');
+    bar.className = 'wave-bar';
+    bar.style.height = '4px';
+    el.appendChild(bar);
+  }
+}
+
+function animateWaveform() {
+  const bars = document.querySelectorAll('.wave-bar');
+  if (!state.analyser) {
+    // Idle animation
+    bars.forEach((b, i) => {
+      const h = 4 + Math.sin(Date.now() / 300 + i * 0.5) * 12;
+      b.style.height = Math.max(4, h) + 'px';
+    });
+    state.waveAnimFrame = requestAnimationFrame(animateWaveform);
+    return;
+  }
+
+  const data = new Uint8Array(state.analyser.frequencyBinCount);
+  state.analyser.getByteFrequencyData(data);
+
+  bars.forEach((b, i) => {
+    const v = data[i] || 0;
+    const h = 4 + (v / 255) * 52;
+    b.style.height = h + 'px';
+  });
+
+  state.waveAnimFrame = requestAnimationFrame(animateWaveform);
+}
+
+// ── SESSION TIMER ─────────────────────────────────────────────────────────────
+function startSessionTimer() {
+  state.sessionStart = Date.now();
+  state.timerInterval = setInterval(() => {
+    const elapsed = Math.floor((Date.now() - state.sessionStart) / 1000);
+    const m = Math.floor(elapsed / 60);
+    const s = elapsed % 60;
+    document.getElementById('session-timer').textContent = `${m}:${s.toString().padStart(2, '0')}`;
+  }, 1000);
+}
+
+function showSignalWarning(level, message) {
+  const el = document.getElementById('signal-warning');
+  const val = document.getElementById('signal-quality-val');
+  el.textContent = message;
+  el.classList.add('visible');
+  val.className = `signal-val ${level}`;
+  val.textContent = level === 'lost' ? 'Lost' : level === 'weak' ? 'Weak' : 'Good';
+  if (level === 'good') el.classList.remove('visible');
+  setTimeout(() => el.classList.remove('visible'), 8000);
+}
+
+function confirmEndSession() {
+  if (confirm('End the mic session? All listeners will be disconnected.')) {
+    state.ws?.send(JSON.stringify({ type: 'end_session' }));
+    state.ws?.close();
+    stopMicStream();
+    clearInterval(state.timerInterval);
+    await releaseWakeLock();
+    showScreen('role-select');
+    showToast('Session ended. JazakAllah khayran for volunteering.');
+  }
+}
+
+// ── LISTENER FLOW ─────────────────────────────────────────────────────────────
+function goToLangSelect() {
+  buildLangGrid();
+  showScreen('lang-select');
+}
+
+function buildLangGrid() {
+  const grid = document.getElementById('lang-grid');
+  grid.innerHTML = '';
+  LANGUAGES.forEach(l => {
+    const item = document.createElement('div');
+    item.className = 'lang-item' + (l.code === state.lang ? ' selected' : '');
+    item.innerHTML = `<div class="lang-native">${l.native}</div><div class="lang-english">${l.english}</div>`;
+    item.onclick = () => {
+      document.querySelectorAll('.lang-item').forEach(i => i.classList.remove('selected'));
+      item.classList.add('selected');
+      state.lang = l.code;
+      document.getElementById('lang-switch-btn').textContent = l.code.toUpperCase();
+    };
+    grid.appendChild(item);
+  });
+}
+
+async function confirmLanguage() {
+  showConnecting('Finding nearby session…');
+  showScreen('caption-view');
+
+  try {
+    const gps = await getGPS();
+    const res = await fetch(`${API_URL}/api/session/nearby?lat=${gps.lat}&lng=${gps.lng}`);
+    const data = await res.json();
+
+    if (!data.found) {
+      hideConnecting();
+      document.getElementById('caption-mosque-name').textContent = 'No active session nearby';
+      document.getElementById('caption-location').textContent = 'Ask the volunteer to start the session';
+      showToast('No session found within 500m');
+      return;
+    }
+
+    connectListener(data.session_id, data.mosque_name);
+
+  } catch (err) {
+    // Demo mode — connect to mock session
+    hideConnecting();
+    document.getElementById('caption-mosque-name').textContent = 'Demo Mode';
+    document.getElementById('caption-location').textContent = 'Mock session (no server)';
+    startDemoMode();
+  }
+}
+
+function getGPS() {
+  return new Promise((resolve, reject) => {
+    if (!navigator.geolocation) {
+      resolve({ lat: 25.2048, lng: 55.2708 }); // Dubai fallback
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      pos => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+      () => resolve({ lat: 25.2048, lng: 55.2708 }),
+      { timeout: 8000 }
+    );
+  });
+}
+
+function connectListener(session_id, mosque_name) {
+  state.sessionId = session_id;
+  state.role = 'listener';
+
+  const ws = new WebSocket(`${SERVER_URL}/ws/listen/${session_id}?lang=${state.lang}`);
+  state.ws = ws;
+
+  ws.onopen = () => {};
+
+  ws.onmessage = (ev) => {
+    const msg = JSON.parse(ev.data);
+    switch (msg.type) {
+      case 'connected':
+        hideConnecting();
+        document.getElementById('caption-mosque-name').textContent = msg.mosque_name || 'Mosque';
+        document.getElementById('caption-location').textContent = msg.session_state === 'live' ? 'Session is live' : 'Waiting for volunteer…';
+        if (msg.session_state === 'live') showLivePill();
+        break;
+      case 'session_live':
+        showLivePill();
+        document.getElementById('caption-location').textContent = 'Translation is live';
+        showToast('Session is now live');
+        break;
+      case 'partial':
+        document.getElementById('partial-display').textContent = msg.arabic;
+        break;
+      case 'segment':
+        addCaptionSegment(msg.text, msg.arabic);
+        updateDelay(msg.timestamp);
+        state.segmentCount++;
+        break;
+      case 'session_ended':
+        hideLivePill();
+        showToast('The session has ended');
+        break;
+      case 'error':
+        hideConnecting();
+        showToast(msg.message);
+        break;
+    }
+  };
+
+  ws.onerror = () => {
+    hideConnecting();
+    showToast('Connection lost. Retrying…');
+    setTimeout(() => connectListener(session_id, mosque_name), 3000);
+  };
+
+  ws.onclose = () => {
+    hideLivePill();
+  };
+}
+
+// ── CAPTION RENDERING ─────────────────────────────────────────────────────────
+const captionHistory = [];
+
+function addCaptionSegment(text, arabic) {
+  const area = document.getElementById('caption-area');
+  const waiting = document.getElementById('waiting-state');
+  if (waiting) waiting.style.display = 'none';
+
+  // Age existing segments
+  document.querySelectorAll('.segment-block').forEach(b => b.classList.add('old'));
+
+  const block = document.createElement('div');
+  block.className = 'segment-block';
+
+  const textEl = document.createElement('div');
+  textEl.className = 'segment-text';
+  textEl.textContent = text;
+  block.appendChild(textEl);
+
+  if (arabic) {
+    const arabicEl = document.createElement('div');
+    arabicEl.className = 'segment-arabic';
+    arabicEl.textContent = arabic;
+    block.appendChild(arabicEl);
+  }
+
+  // Insert before partial
+  const partial = document.getElementById('partial-display');
+  area.insertBefore(block, partial);
+
+  // Clear partial
+  partial.textContent = '';
+
+  // Keep last 12 segments
+  const blocks = area.querySelectorAll('.segment-block');
+  if (blocks.length > 12) blocks[0].remove();
+
+  // Scroll to bottom
+  area.scrollTop = area.scrollHeight;
+  captionHistory.push({ text, arabic, timestamp: Date.now() });
+}
+
+function showLivePill() {
+  document.getElementById('live-pill').style.display = 'flex';
+  document.getElementById('waiting-state').style.display = 'none';
+}
+
+function hideLivePill() {
+  document.getElementById('live-pill').style.display = 'none';
+}
+
+function updateDelay(segmentTimestamp) {
+  const delay = ((Date.now() - segmentTimestamp) / 1000).toFixed(1);
+  document.getElementById('delay-val').textContent = `~${delay}s`;
+}
+
+// ── AUDIO TOGGLE ──────────────────────────────────────────────────────────────
+function toggleAudio() {
+  state.audioEnabled = !state.audioEnabled;
+  const track = document.getElementById('audio-toggle-track');
+  const label = document.getElementById('audio-label');
+  track.classList.toggle('on', state.audioEnabled);
+  label.textContent = state.audioEnabled ? 'Audio on' : 'Audio off';
+  // TTS audio playback would be triggered here in production
+}
+
+// ── FONT SIZE ─────────────────────────────────────────────────────────────────
+function setFontSize(size) {
+  document.body.className = `font-${size}`;
+  document.querySelectorAll('.font-btn').forEach(b => {
+    b.classList.toggle('active-size', b.dataset.size === size);
+  });
+}
+
+// ── LANGUAGE SWITCH (in caption view) ────────────────────────────────────────
+function changeLanguage() {
+  buildLangGrid();
+  showScreen('lang-select');
+}
+
+// ── DEMO MODE (no server) ─────────────────────────────────────────────────────
+function startDemoMode() {
+  showLivePill();
+  document.getElementById('caption-location').textContent = 'Demo — live session preview';
+
+  const demoSegments = [
+    {
+      en: 'All praise is due to Allah, Lord of all worlds, and peace and blessings be upon our beloved Prophet Muhammad ﷺ.',
+      ur: 'تمام تعریفیں اللہ رب العالمین کے لیے ہیں، اور درود و سلام ہو ہمارے محبوب نبی محمد ﷺ پر۔',
+      fr: 'Toute louange est due à Allah, Seigneur des mondes, et que la paix et les bénédictions soient sur le Prophète Muhammad ﷺ.',
+      ar: 'الحمد لله رب العالمين، والصلاة والسلام على سيدنا محمد ﷺ'
+    },
+    {
+      en: 'O servants of Allah — fear Allah as He deserves to be feared, and do not die except in a state of Islam.',
+      ur: 'اے اللہ کے بندو — اللہ سے ڈرو جیسا کہ اس سے ڈرنے کا حق ہے، اور مرنا تو صرف مسلمان کی حالت میں۔',
+      fr: 'Ô serviteurs d\'Allah — craignez Allah comme Il mérite d\'être craint, et ne mourez qu\'en état d\'islam.',
+      ar: 'أما بعد، فيا عباد الله، اتقوا الله حق تقاته ولا تموتن إلا وأنتم مسلمون'
+    },
+    {
+      en: 'Indeed, patience is not merely enduring hardship — it is trusting that every trial holds a wisdom far greater than we can comprehend.',
+      ur: 'بیشک صبر محض مشکلات برداشت کرنا نہیں — بلکہ یہ یقین ہے کہ ہر آزمائش میں ایک عظیم حکمت پوشیدہ ہے۔',
+      fr: 'En vérité, la patience n\'est pas seulement endurer l\'épreuve — c\'est avoir confiance que chaque épreuve renferme une grande sagesse.',
+      ar: 'إن الصبر ليس مجرد تحمل الشدائد، بل هو الثقة بأن كل ابتلاء له حكمة عظيمة'
+    },
+    {
+      en: 'Allah the Almighty says in His noble book: [Quran 94:5–6] "Verily with every hardship comes ease. Verily with every hardship comes ease."',
+      ur: 'اللہ تعالیٰ اپنی مقدس کتاب میں فرماتے ہیں: [قرآن ۹۴:۵-۶] "بیشک ہر تنگی کے ساتھ آسانی ہے۔ بیشک ہر تنگی کے ساتھ آسانی ہے۔"',
+      fr: 'Allah le Très-Haut dit dans Son noble Livre : [Coran 94:5–6] "En vérité, avec chaque difficulté vient la facilité."',
+      ar: 'قال الله تعالى: ﴿إِنَّ مَعَ الْعُسْرِ يُسْرًا، إِنَّ مَعَ الْعُسْرِ يُسْرًا﴾'
+    },
+    {
+      en: 'We ask Allah to keep us firm upon His religion, and to make us among His righteous and pious servants. Ameen.',
+      ur: 'ہم اللہ سے دعا کرتے ہیں کہ وہ ہمیں اپنے دین پر ثابت قدم رکھے، اور ہمیں اپنے نیک اور پرہیزگار بندوں میں شامل فرمائے۔ آمین۔',
+      fr: 'Nous demandons à Allah de nous maintenir fermes sur Sa religion et de nous compter parmi Ses serviteurs vertueux. Ameen.',
+      ar: 'نسأل الله أن يثبتنا على دينه، وأن يجعلنا من عباده الصالحين المتقين. آمين'
+    },
+  ];
+
+  let i = 0;
+  const show = () => {
+    if (i >= demoSegments.length) return;
+    const seg = demoSegments[i++];
+    const text = seg[state.lang] || seg['en'];
+    // Simulate partial
+    document.getElementById('partial-display').textContent = seg.ar.substring(0, 20) + '…';
+    setTimeout(() => {
+      addCaptionSegment(text, seg.ar);
+      updateDelay(Date.now() - 1800);
+    }, 1200);
+    if (i < demoSegments.length) setTimeout(show, 9000);
+  };
+
+  setTimeout(show, 2000);
+}
+</script>
+</body>
+</html>
