@@ -1420,8 +1420,7 @@ function showSignalWarning(level, message) {
   if (level === 'good') el.classList.remove('visible');
   setTimeout(() => el.classList.remove('visible'), 8000);
 }
-
-function confirmEndSession() {
+async function confirmEndSession() {
   if (confirm('End the mic session? All listeners will be disconnected.')) {
     state.ws?.send(JSON.stringify({ type: 'end_session' }));
     state.ws?.close();
