@@ -1,0 +1,1302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mubin Admin — Control Panel</title>
+<style>
+/* ── TOKENS ──────────────────────────────────────────────────────────────── */
+:root {
+  --bg:       #0a0f0d;
+  --surface:  #111a16;
+  --surface2: #182218;
+  --border:   #1e2e24;
+  --border2:  #273c2e;
+  --green:    #2e7d52;
+  --green2:   #3fa66e;
+  --glow:     #52d68a;
+  --amber:    #d4a017;
+  --amber2:   #f0bf40;
+  --red:      #b93030;
+  --red2:     #e05252;
+  --blue:     #2855a0;
+  --blue2:    #4a80d4;
+  --text1:    #dfe8e2;
+  --text2:    #8aa898;
+  --text3:    #4a6358;
+  --mono:     ui-monospace, 'Courier New', monospace;
+  --sans:     -apple-system, 'Helvetica Neue', Arial, sans-serif;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text1);
+  font-family: var(--sans);
+  font-size: 13px;
+  -webkit-font-smoothing: antialiased;
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── TOP BAR ─────────────────────────────────────────────────────────────── */
+.topbar {
+  height: 48px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  gap: 20px;
+  flex-shrink: 0;
+}
+
+.logo {
+  font-family: var(--mono);
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--glow);
+  letter-spacing: -0.5px;
+}
+
+.logo span { color: var(--text2); font-weight: 400; }
+
+.topbar-divider {
+  width: 1px;
+  height: 20px;
+  background: var(--border);
+}
+
+.ws-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--text3);
+  font-family: var(--mono);
+}
+
+.ws-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--red2);
+  transition: background 0.3s;
+}
+
+.ws-dot.connected { background: var(--glow); }
+.ws-dot.connected { animation: pulse-glow 2s ease-in-out infinite; }
+
+@keyframes pulse-glow {
+  0%,100% { box-shadow: 0 0 0 0 rgba(82,214,138,0.3); }
+  50%      { box-shadow: 0 0 0 4px rgba(82,214,138,0); }
+}
+
+.topbar-stats {
+  display: flex;
+  gap: 20px;
+  margin-left: auto;
+}
+
+.stat-item {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+}
+
+.stat-val {
+  font-family: var(--mono);
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--text1);
+  transition: color 0.3s;
+}
+
+.stat-val.changed { color: var(--glow); }
+
+.stat-label {
+  font-size: 10px;
+  color: var(--text3);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+}
+
+.topbar-time {
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--text3);
+}
+
+/* ── MAIN LAYOUT ─────────────────────────────────────────────────────────── */
+.main {
+  display: grid;
+  grid-template-columns: 300px 1fr 300px;
+  flex: 1;
+  overflow: hidden;
+}
+
+.panel {
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.panel:last-child { border-right: none; }
+
+.panel-header {
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+
+.panel-title {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--text3);
+  font-weight: 500;
+  font-family: var(--mono);
+}
+
+.panel-count {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text2);
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 2px 6px;
+}
+
+.panel-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 8px;
+}
+
+.panel-body::-webkit-scrollbar { width: 4px; }
+.panel-body::-webkit-scrollbar-track { background: transparent; }
+.panel-body::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+/* ── SESSION CARDS ───────────────────────────────────────────────────────── */
+.session-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 6px;
+  cursor: pointer;
+  transition: all 0.15s;
+  position: relative;
+}
+
+.session-card:hover {
+  border-color: var(--border2);
+  background: var(--surface2);
+}
+
+.session-card.selected {
+  border-color: var(--green2);
+  background: rgba(46,125,82,0.08);
+}
+
+.session-card.ended {
+  opacity: 0.5;
+}
+
+.session-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.session-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text1);
+  line-height: 1.3;
+}
+
+.session-id {
+  font-family: var(--mono);
+  font-size: 9px;
+  color: var(--text3);
+  margin-top: 2px;
+}
+
+.status-badge {
+  font-size: 9px;
+  font-weight: 500;
+  padding: 2px 7px;
+  border-radius: 3px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-family: var(--mono);
+  flex-shrink: 0;
+}
+
+.status-badge.live    { background: rgba(46,125,82,0.2); color: var(--glow); border: 1px solid rgba(82,214,138,0.3); }
+.status-badge.waiting { background: rgba(212,160,23,0.15); color: var(--amber2); border: 1px solid rgba(240,191,64,0.3); }
+.status-badge.ended   { background: rgba(74,99,88,0.2); color: var(--text3); border: 1px solid var(--border); }
+
+.session-meta {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+}
+
+.meta-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: var(--text2);
+}
+
+.meta-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.meta-dot.signal-good { background: var(--glow); }
+.meta-dot.signal-weak { background: var(--amber2); }
+.meta-dot.signal-lost { background: var(--red2); animation: blink 0.8s ease-in-out infinite; }
+
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
+
+/* ── SESSION DETAIL (middle panel) ──────────────────────────────────────── */
+.detail-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  gap: 10px;
+  color: var(--text3);
+}
+
+.detail-empty svg { opacity: 0.3; }
+
+.detail-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1px;
+  background: var(--border);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 12px;
+}
+
+.detail-cell {
+  background: var(--surface);
+  padding: 12px 14px;
+}
+
+.detail-key {
+  font-size: 10px;
+  color: var(--text3);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 4px;
+  font-family: var(--mono);
+}
+
+.detail-value {
+  font-size: 18px;
+  font-weight: 500;
+  font-family: var(--mono);
+  color: var(--text1);
+}
+
+.detail-value.green { color: var(--glow); }
+.detail-value.amber { color: var(--amber2); }
+.detail-value.red   { color: var(--red2); }
+
+/* Transcript */
+.transcript-feed {
+  font-family: var(--mono);
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+.transcript-row {
+  display: flex;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+  animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+  from { opacity: 0; transform: translateX(-4px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+.tr-time {
+  font-size: 10px;
+  color: var(--text3);
+  flex-shrink: 0;
+  padding-top: 2px;
+  min-width: 44px;
+}
+
+.tr-arabic {
+  color: var(--text2);
+  direction: rtl;
+  text-align: right;
+  font-size: 12px;
+  line-height: 1.6;
+  flex: 1;
+}
+
+/* Languages bar */
+.lang-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 12px;
+}
+
+.lang-tag {
+  font-family: var(--mono);
+  font-size: 10px;
+  padding: 2px 8px;
+  border-radius: 3px;
+  background: var(--surface2);
+  border: 1px solid var(--border2);
+  color: var(--text2);
+}
+
+.lang-tag .count {
+  color: var(--text1);
+  font-weight: 500;
+  margin-left: 4px;
+}
+
+/* ── LOG PANEL ───────────────────────────────────────────────────────────── */
+.log-entry {
+  display: flex;
+  gap: 8px;
+  padding: 5px 4px;
+  border-bottom: 1px solid rgba(30,46,36,0.5);
+  font-family: var(--mono);
+  font-size: 11px;
+  animation: slideIn 0.2s ease;
+}
+
+.log-time {
+  color: var(--text3);
+  flex-shrink: 0;
+  font-size: 10px;
+  padding-top: 1px;
+}
+
+.log-type {
+  flex-shrink: 0;
+  font-size: 9px;
+  padding: 1px 5px;
+  border-radius: 2px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  align-self: flex-start;
+  margin-top: 2px;
+}
+
+.log-type.info  { background: rgba(74,128,212,0.15); color: var(--blue2); }
+.log-type.join  { background: rgba(46,125,82,0.15);  color: var(--glow);  }
+.log-type.leave { background: rgba(74,99,88,0.15);   color: var(--text3); }
+.log-type.warn  { background: rgba(212,160,23,0.15); color: var(--amber2); }
+.log-type.seg   { background: rgba(82,214,138,0.08); color: var(--green2); }
+
+.log-text {
+  color: var(--text2);
+  flex: 1;
+  line-height: 1.5;
+}
+
+/* ── MAP PLACEHOLDER ─────────────────────────────────────────────────────── */
+.mini-map {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  height: 140px;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.map-grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(var(--border) 1px, transparent 1px),
+    linear-gradient(90deg, var(--border) 1px, transparent 1px);
+  background-size: 24px 24px;
+  opacity: 0.5;
+}
+
+.map-dot {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  background: var(--glow);
+  border-radius: 50%;
+  border: 2px solid var(--bg);
+  box-shadow: 0 0 8px rgba(82,214,138,0.5);
+}
+
+.map-ring {
+  position: absolute;
+  width: 60px;
+  height: 60px;
+  border: 1px solid rgba(82,214,138,0.2);
+  border-radius: 50%;
+  animation: expand 2s ease-out infinite;
+}
+
+@keyframes expand {
+  from { transform: scale(0.2); opacity: 0.8; }
+  to   { transform: scale(1);   opacity: 0; }
+}
+
+/* ── BOTTOM STATUS BAR ───────────────────────────────────────────────────── */
+.statusbar {
+  height: 24px;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  gap: 20px;
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--text3);
+  flex-shrink: 0;
+}
+
+.sb-sep { color: var(--border2); }
+</style>
+</head>
+<body>
+
+<!-- ── TOP BAR ──────────────────────────────────────────────────────────── -->
+<div class="topbar">
+  <div class="logo">mubin <span>/ admin</span></div>
+  <div class="topbar-divider"></div>
+  <div class="ws-status">
+    <div class="ws-dot" id="ws-dot"></div>
+    <span id="ws-label">Disconnected</span>
+  </div>
+  <div class="topbar-stats">
+    <div class="stat-item">
+      <div class="stat-val" id="stat-active">0</div>
+      <div class="stat-label">active</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-val" id="stat-listeners">0</div>
+      <div class="stat-label">listeners</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-val" id="stat-archived">0</div>
+      <div class="stat-label">completed</div>
+    </div>
+  </div>
+  <div class="topbar-time" id="topbar-clock"></div>
+</div>
+
+<!-- ── MAIN ─────────────────────────────────────────────────────────────── -->
+<div class="main">
+
+  <!-- LEFT: Session list -->
+  <div class="panel">
+    <div class="panel-header">
+      <div class="panel-title">Live sessions</div>
+      <div class="panel-count" id="session-count">0</div>
+    </div>
+    <div class="panel-body" id="session-list">
+      <div style="text-align:center;padding:40px 0;color:var(--text3)">
+        <div style="font-size:11px;font-family:var(--mono)">No active sessions</div>
+        <div style="font-size:10px;margin-top:4px">Waiting for volunteers…</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MIDDLE: Session detail -->
+  <div class="panel" style="border-right:none">
+    <div class="panel-header">
+      <div class="panel-title" id="detail-title">Session detail</div>
+      <div id="detail-status-badge"></div>
+    </div>
+    <div class="panel-body" id="detail-panel">
+      <div class="detail-empty">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round">
+          <rect x="3" y="3" width="18" height="18" rx="3"/>
+          <path d="M3 9h18M9 21V9"/>
+        </svg>
+        <span style="font-size:11px;font-family:var(--mono)">Select a session</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT: Event log -->
+  <div class="panel">
+    <div class="panel-header">
+      <div class="panel-title">Event log</div>
+      <div class="panel-count" id="log-count">0</div>
+    </div>
+    <div class="panel-body" id="log-panel">
+    </div>
+  </div>
+
+</div>
+
+<!-- ── NOTIFICATION MODAL ─────────────────────────────────────────────── -->
+<div id="notif-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:1000;align-items:center;justify-content:center">
+  <div style="background:var(--surface);border:1px solid var(--border2);border-radius:12px;padding:24px;width:420px;max-width:90vw">
+    <div style="font-family:var(--mono);font-size:13px;color:var(--glow);margin-bottom:16px">broadcast notification</div>
+    <div style="font-size:11px;color:var(--text3);margin-bottom:6px;font-family:var(--mono);letter-spacing:1px;text-transform:uppercase">Message</div>
+    <textarea id="notif-message" placeholder="e.g. Please make room in the back rows…" style="width:100%;background:var(--bg);border:1px solid var(--border2);border-radius:6px;padding:10px 12px;color:var(--text1);font-family:var(--sans);font-size:13px;resize:vertical;min-height:80px;outline:none;margin-bottom:12px"></textarea>
+    <div style="font-size:11px;color:var(--text3);margin-bottom:6px;font-family:var(--mono);letter-spacing:1px;text-transform:uppercase">Type</div>
+    <div style="display:flex;gap:8px;margin-bottom:16px">
+      <button onclick="setNotifType('info')"    id="ntype-info"    style="flex:1;padding:7px;background:var(--green);border:none;border-radius:5px;color:#fff;font-family:var(--mono);font-size:11px;cursor:pointer">ℹ info</button>
+      <button onclick="setNotifType('warning')" id="ntype-warning" style="flex:1;padding:7px;background:var(--surface2);border:1px solid var(--border2);border-radius:5px;color:var(--text2);font-family:var(--mono);font-size:11px;cursor:pointer">⚠ warning</button>
+      <button onclick="setNotifType('urgent')"  id="ntype-urgent"  style="flex:1;padding:7px;background:var(--surface2);border:1px solid var(--border2);border-radius:5px;color:var(--text2);font-family:var(--mono);font-size:11px;cursor:pointer">🔴 urgent</button>
+    </div>
+    <div style="font-size:11px;color:var(--text3);margin-bottom:10px;font-family:var(--mono)" id="notif-scope-label">Sending to: all sessions</div>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button onclick="closeNotifModal()" style="padding:8px 16px;background:transparent;border:1px solid var(--border2);border-radius:5px;color:var(--text2);font-family:var(--mono);font-size:11px;cursor:pointer">Cancel</button>
+      <button onclick="sendNotification()" style="padding:8px 16px;background:var(--green);border:none;border-radius:5px;color:#fff;font-family:var(--mono);font-size:11px;cursor:pointer">Send →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── MERGE MODAL ────────────────────────────────────────────────────── -->
+<div id="merge-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:1000;align-items:center;justify-content:center">
+  <div style="background:var(--surface);border:1px solid var(--border2);border-radius:12px;padding:24px;width:440px;max-width:90vw">
+    <div style="font-family:var(--mono);font-size:13px;color:var(--amber2);margin-bottom:4px">merge sessions</div>
+    <div style="font-size:12px;color:var(--text3);margin-bottom:16px">Listeners from the secondary session will be redirected to the primary.</div>
+    <div style="font-size:11px;color:var(--text3);margin-bottom:6px;font-family:var(--mono);letter-spacing:1px;text-transform:uppercase">Primary (keep)</div>
+    <select id="merge-primary" style="width:100%;background:var(--bg);border:1px solid var(--border2);border-radius:6px;padding:8px 12px;color:var(--text1);font-family:var(--mono);font-size:12px;margin-bottom:12px;outline:none"></select>
+    <div style="font-size:11px;color:var(--text3);margin-bottom:6px;font-family:var(--mono);letter-spacing:1px;text-transform:uppercase">Secondary (close)</div>
+    <select id="merge-secondary" style="width:100%;background:var(--bg);border:1px solid var(--border2);border-radius:6px;padding:8px 12px;color:var(--text1);font-family:var(--mono);font-size:12px;margin-bottom:16px;outline:none"></select>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button onclick="closeMergeModal()" style="padding:8px 16px;background:transparent;border:1px solid var(--border2);border-radius:5px;color:var(--text2);font-family:var(--mono);font-size:11px;cursor:pointer">Cancel</button>
+      <button onclick="confirmMerge()" style="padding:8px 16px;background:var(--amber);border:none;border-radius:5px;color:#000;font-family:var(--mono);font-size:11px;cursor:pointer">Merge →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── STATUS BAR ──────────────────────────────────────────────────────── -->
+<div class="statusbar">
+  <span>mubin-server v1.0</span>
+  <span class="sb-sep">·</span>
+  <span id="sb-uptime">uptime: —</span>
+  <span class="sb-sep">·</span>
+  <span id="sb-env">mode: demo</span>
+  <span class="sb-sep">·</span>
+  <span id="sb-msgs">msgs: 0</span>
+</div>
+
+<script>
+// ── GLOBAL ERROR HANDLER ──────────────────────────────────────────────────
+window.onerror = function(msg, src, line, col) {
+  const box = document.createElement('div');
+  box.style.cssText = 'position:fixed;bottom:0;left:0;right:0;background:#7b1a1a;color:#fff;font-family:monospace;font-size:11px;padding:10px 14px;z-index:9999;white-space:pre-wrap;word-break:break-all';
+  box.textContent = 'Error: ' + msg + ' (line ' + line + ')';
+  document.body.appendChild(box);
+  return false;
+};
+
+// ── CONFIG ────────────────────────────────────────────────────────────────
+const WS_URL = window.location.hostname === 'localhost'
+  ? 'ws://localhost:8080/ws/admin'
+  : 'wss://mubin-server-production-ae55.up.railway.app/ws/admin';
+
+// ── STATE ─────────────────────────────────────────────────────────────────
+let sessions = [];
+let selectedId = null;
+let ws = null;
+let logCount = 0;
+let msgCount = 0;
+let startedAt = Date.now();
+let prevListeners = 0;
+
+// Track listener count history per session for sparkline chart
+const listenerHistory = {};   // session_id → number[]
+// Track live transcript segments per session
+const transcriptFeeds = {};   // session_id → segment[]
+
+const API_URL = window.location.hostname === 'localhost'
+  ? 'http://localhost:8080'
+  : 'https://mubin-server-production-ae55.up.railway.app';
+
+// ── CLOCK ─────────────────────────────────────────────────────────────────
+function updateClock() {
+  const now = new Date();
+  document.getElementById('topbar-clock').textContent =
+    now.toUTCString().replace('GMT', 'UTC').split(' ').slice(1, 5).join(' ');
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+// ── UPTIME ────────────────────────────────────────────────────────────────
+setInterval(() => {
+  const s = Math.floor((Date.now() - startedAt) / 1000);
+  const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), sec = s % 60;
+  document.getElementById('sb-uptime').textContent =
+    `uptime: ${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
+}, 1000);
+
+// ── WEBSOCKET ─────────────────────────────────────────────────────────────
+function connect() {
+  ws = new WebSocket(WS_URL);
+
+  ws.onopen = () => {
+    setWsStatus(true);
+    addLog('info', 'Connected to Mubin server');
+    document.getElementById('sb-env').textContent = 'mode: live';
+  };
+
+  ws.onmessage = (ev) => {
+    msgCount++;
+    document.getElementById('sb-msgs').textContent = `msgs: ${msgCount}`;
+    try {
+      const msg = JSON.parse(ev.data);
+      handleMessage(msg);
+    } catch (_) {}
+  };
+
+  ws.onclose = () => {
+    setWsStatus(false);
+    addLog('warn', 'Disconnected — retrying in 5s…');
+    setTimeout(connect, 5000);
+  };
+
+  ws.onerror = () => setWsStatus(false);
+}
+
+// Fall back to demo only if server unreachable after 3s
+setTimeout(() => {
+  if (!ws || ws.readyState !== WebSocket.OPEN) {
+    addLog('warn', 'Server unreachable — loading demo data');
+    loadDemoData();
+  }
+}, 3000);
+
+connect();
+
+function setWsStatus(connected) {
+  const dot = document.getElementById('ws-dot');
+  const label = document.getElementById('ws-label');
+  dot.className = 'ws-dot' + (connected ? ' connected' : '');
+  label.textContent = connected ? 'Connected' : 'Disconnected';
+}
+
+function handleMessage(msg) {
+  switch (msg.type) {
+    case 'init':
+    case 'sessions_update':
+      updateSessions(msg.sessions || []);
+      break;
+    case 'action_result':
+      handleActionResult(msg);
+      break;
+    case 'segment':
+      // Live transcript segments pushed from server
+      if (msg.session_id) {
+        if (!transcriptFeeds[msg.session_id]) transcriptFeeds[msg.session_id] = [];
+        transcriptFeeds[msg.session_id].push(msg);
+        if (transcriptFeeds[msg.session_id].length > 50) transcriptFeeds[msg.session_id].shift();
+        addLog('seg', `#${msg.segment_index} → ${(msg.languages || []).join(', ') || 'AR'}`);
+        // Update live transcript panel if this session is selected
+        if (selectedId === msg.session_id) {
+          const feed = document.getElementById(`transcript-feed-${msg.session_id}`);
+          if (feed) {
+            const row = document.createElement('div');
+            row.className = 'transcript-row';
+            row.innerHTML = `
+              <span class="tr-time">${fmtTime(msg.timestamp)}</span>
+              <span class="tr-arabic">${esc(msg.arabic || '')}</span>
+            `;
+            feed.insertBefore(row, feed.firstChild);
+            while (feed.children.length > 8) feed.lastChild.remove();
+          }
+        }
+      }
+      break;
+  }
+}
+
+// ── TRANSCRIPT EXPORT ─────────────────────────────────────────────────────
+async function exportTranscript(session_id, format) {
+  try {
+    const url = `${API_URL}/api/admin/transcript/${session_id}?format=${format}`;
+    const res = await fetch(url);
+
+    if (!res.ok) {
+      addLog('warn', `Transcript export failed: ${res.status}`);
+      return;
+    }
+
+    if (format === 'text') {
+      const text = await res.text();
+      const blob = new Blob([text], { type: 'text/plain' });
+      downloadBlob(blob, `mubin-transcript-${session_id.substring(0,8)}.txt`);
+    } else {
+      const data = await res.json();
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      downloadBlob(blob, `mubin-transcript-${session_id.substring(0,8)}.json`);
+    }
+    addLog('info', `Transcript exported (${format.toUpperCase()}) · ${session_id.substring(0,8)}`);
+  } catch (err) {
+    // In demo mode, export from in-memory transcript feed
+    const segs = transcriptFeeds[session_id] || [];
+    if (segs.length === 0) {
+      addLog('warn', 'No transcript data available (demo mode)');
+      return;
+    }
+    if (format === 'json') {
+      const blob = new Blob([JSON.stringify({ session_id, transcript: segs }, null, 2)], { type: 'application/json' });
+      downloadBlob(blob, `mubin-transcript-${session_id.substring(0,8)}.json`);
+    } else {
+      const lines = segs.map((s, i) => `[${fmtTime(s.timestamp)}] #${i+1}\n  [AR] ${s.arabic || ''}`).join('\n\n');
+      const blob = new Blob([lines], { type: 'text/plain' });
+      downloadBlob(blob, `mubin-transcript-${session_id.substring(0,8)}.txt`);
+    }
+    addLog('info', `Transcript exported from cache (${format.toUpperCase()})`);
+  }
+}
+
+function downloadBlob(blob, filename) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+
+// ── SESSION RENDERING ─────────────────────────────────────────────────────
+function updateSessions(newSessions) {
+  const prevCount = sessions.length;
+  sessions = newSessions;
+
+  const totalListeners = sessions.reduce((n, s) => n + (s.listener_count || 0), 0);
+
+  // Update stats
+  const activeCount = sessions.filter(s => s.state !== 'ended').length;
+  setStatVal('stat-active',    activeCount);
+  setStatVal('stat-listeners', totalListeners);
+  setStatVal('stat-archived',  sessions.filter(s => s.state === 'ended').length);
+  document.getElementById('session-count').textContent = activeCount;
+
+  // Track listener history for sparklines
+  sessions.forEach(s => {
+    if (!listenerHistory[s.session_id]) listenerHistory[s.session_id] = [];
+    const hist = listenerHistory[s.session_id];
+    const last = hist[hist.length - 1];
+    if (last !== s.listener_count) {
+      hist.push(s.listener_count || 0);
+      if (hist.length > 60) hist.shift(); // keep last 60 data points
+    }
+  });
+
+  // Log changes
+  if (sessions.length > prevCount) addLog('join', `New session started · ${sessions.length} total`);
+  if (totalListeners !== prevListeners) {
+    if (totalListeners > prevListeners) addLog('join', `Listener joined · ${totalListeners} total`);
+    else addLog('leave', `Listener left · ${totalListeners} total`);
+    prevListeners = totalListeners;
+  }
+
+  renderSessionList();
+  if (selectedId) renderDetailPanel();
+}
+
+function setStatVal(id, val) {
+  const el = document.getElementById(id);
+  if (el.textContent !== String(val)) {
+    el.textContent = val;
+    el.classList.add('changed');
+    setTimeout(() => el.classList.remove('changed'), 600);
+  }
+}
+
+function renderSessionList() {
+  const list = document.getElementById('session-list');
+
+  if (sessions.length === 0) {
+    list.innerHTML = `<div style="text-align:center;padding:40px 0;color:var(--text3)">
+      <div style="font-size:11px;font-family:var(--mono)">No active sessions</div>
+      <div style="font-size:10px;margin-top:4px">Waiting for volunteers…</div>
+    </div>`;
+    return;
+  }
+
+  list.innerHTML = '';
+  sessions.forEach(s => {
+    const card = document.createElement('div');
+    card.className = `session-card${s.state === 'ended' ? ' ended' : ''}${s.session_id === selectedId ? ' selected' : ''}`;
+    card.onclick = () => selectSession(s.session_id);
+
+    const signalClass = `signal-${s.volunteer_signal || 'good'}`;
+
+    card.innerHTML = `
+      <div class="session-top">
+        <div>
+          <div class="session-name">${esc(s.mosque_name)}</div>
+          <div class="session-id">${s.session_id.substring(0, 8)}…</div>
+        </div>
+        <div class="status-badge ${s.state}">${s.state}</div>
+      </div>
+      <div class="session-meta">
+        <div class="meta-item">
+          <div class="meta-dot ${signalClass}"></div>
+          <span>${s.listener_count || 0} listeners</span>
+        </div>
+        <div class="meta-item">
+          <div class="meta-dot" style="background:var(--text3)"></div>
+          <span>${fmtDuration(s.duration_seconds)}</span>
+        </div>
+        <div class="meta-item">
+          <div class="meta-dot" style="background:var(--text3)"></div>
+          <span>${s.segment_count || 0} segments</span>
+        </div>
+        <div class="meta-item">
+          <div class="meta-dot" style="background:var(--text3)"></div>
+          <span>${(s.languages_active || []).length} langs</span>
+        </div>
+      </div>
+    `;
+    list.appendChild(card);
+  });
+}
+
+function selectSession(id) {
+  selectedId = id;
+  renderSessionList();
+  renderDetailPanel();
+}
+
+function renderDetailPanel() {
+  const panel = document.getElementById('detail-panel');
+  const session = sessions.find(s => s.session_id === selectedId);
+
+  if (!session) {
+    panel.innerHTML = `<div class="detail-empty">
+      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="3"/><path d="M3 9h18M9 21V9"/></svg>
+      <span style="font-size:11px;font-family:var(--mono)">Select a session</span>
+    </div>`;
+    return;
+  }
+
+  document.getElementById('detail-title').textContent = session.mosque_name;
+  document.getElementById('detail-status-badge').innerHTML =
+    `<div class="status-badge ${session.state}">${session.state}</div>`;
+
+  const signalColour = session.volunteer_signal === 'good' ? 'green'
+                     : session.volunteer_signal === 'weak' ? 'amber' : 'red';
+
+  // Build sparkline data from listenerHistory
+  const history = listenerHistory[session.session_id] || [];
+  const sparkMax = Math.max(...history, session.listener_count || 0, 1);
+  const sparkH = 32;
+  const sparkW = 120;
+  const pts = history.slice(-20).map((v, i, arr) => {
+    const x = (i / Math.max(arr.length - 1, 1)) * sparkW;
+    const y = sparkH - (v / sparkMax) * sparkH;
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  }).join(' ');
+
+  panel.innerHTML = `
+    <!-- GPS mini-map -->
+    <div class="mini-map">
+      <div class="map-grid"></div>
+      <div class="map-ring"></div>
+      <div class="map-dot" style="left:50%;top:50%;transform:translate(-50%,-50%)"></div>
+      <div style="position:absolute;bottom:8px;left:10px;font-family:var(--mono);font-size:9px;color:var(--text3)">
+        ${session.lat?.toFixed(4)}, ${session.lng?.toFixed(4)} · 500m radius
+      </div>
+    </div>
+
+    <!-- Stats grid -->
+    <div class="detail-grid">
+      <div class="detail-cell">
+        <div class="detail-key">Listeners</div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <div class="detail-value green">${session.listener_count || 0}</div>
+          ${history.length > 1 ? `<svg width="${sparkW}" height="${sparkH}" style="opacity:0.6">
+            <polyline points="${pts}" fill="none" stroke="var(--glow)" stroke-width="1.5" stroke-linejoin="round" stroke-linecap="round"/>
+          </svg>` : ''}
+        </div>
+      </div>
+      <div class="detail-cell">
+        <div class="detail-key">Peak</div>
+        <div class="detail-value">${session.peak_listeners || 0}</div>
+      </div>
+      <div class="detail-cell">
+        <div class="detail-key">Duration</div>
+        <div class="detail-value">${fmtDuration(session.duration_seconds)}</div>
+      </div>
+      <div class="detail-cell">
+        <div class="detail-key">Segments</div>
+        <div class="detail-value">${session.segment_count || 0}</div>
+      </div>
+      <div class="detail-cell">
+        <div class="detail-key">Signal</div>
+        <div class="detail-value ${signalColour}">${session.volunteer_signal || 'good'}</div>
+      </div>
+      <div class="detail-cell">
+        <div class="detail-key">State</div>
+        <div class="detail-value" style="font-size:13px;text-transform:uppercase;letter-spacing:1px">${session.state}</div>
+      </div>
+    </div>
+
+    <!-- Languages -->
+    <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;font-family:var(--mono)">Active languages</div>
+    <div class="lang-bar" style="margin-bottom:14px">
+      ${(session.languages_active || []).length === 0
+        ? '<span style="font-size:11px;color:var(--text3)">None yet</span>'
+        : (session.languages_active || []).map(l => `<div class="lang-tag">${l.toUpperCase()}</div>`).join('')
+      }
+    </div>
+
+    <!-- Volunteer info -->
+    <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;font-family:var(--mono)">Volunteer</div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:10px 12px;margin-bottom:14px;font-family:var(--mono);font-size:11px;color:var(--text2)">
+      ${esc(session.volunteer_name || 'Unknown')} · joined ${fmtTime(session.created_at)}
+    </div>
+
+    <!-- Transcript section -->
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+      <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;font-family:var(--mono)">Transcript</div>
+      <div style="display:flex;gap:6px">
+        <button onclick="exportTranscript('${session.session_id}','json')" style="background:var(--surface2);border:1px solid var(--border2);border-radius:4px;padding:3px 8px;font-family:var(--mono);font-size:9px;color:var(--text2);cursor:pointer;letter-spacing:0.5px">JSON</button>
+        <button onclick="exportTranscript('${session.session_id}','text')" style="background:var(--surface2);border:1px solid var(--border2);border-radius:4px;padding:3px 8px;font-family:var(--mono);font-size:9px;color:var(--text2);cursor:pointer;letter-spacing:0.5px">TXT</button>
+      </div>
+    </div>
+    <div class="transcript-feed" id="transcript-feed-${session.session_id}">
+      ${(transcriptFeeds[session.session_id] || []).slice(-8).map(seg => `
+        <div class="transcript-row">
+          <span class="tr-time">${fmtTime(seg.timestamp)}</span>
+          <span class="tr-arabic">${esc(seg.arabic || '')}</span>
+        </div>
+      `).join('') || '<div style="color:var(--text3);font-size:10px;padding:8px 0">Transcript appears here during session…</div>'}
+    </div>
+
+    <!-- Admin actions -->
+    ${session.state !== 'ended' ? `
+    <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border)">
+      <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;font-family:var(--mono);margin-bottom:8px">Admin controls</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <button onclick="adminRefreshSession('${session.session_id}')"
+          style="flex:1;min-width:80px;padding:7px 10px;background:var(--surface2);border:1px solid var(--border2);border-radius:5px;color:var(--blue2);font-family:var(--mono);font-size:10px;cursor:pointer;letter-spacing:0.5px">
+          ↻ Refresh
+        </button>
+        <button onclick="openNotifModal('${session.session_id}','${esc(session.mosque_name)}')"
+          style="flex:1;min-width:80px;padding:7px 10px;background:var(--surface2);border:1px solid var(--border2);border-radius:5px;color:var(--glow);font-family:var(--mono);font-size:10px;cursor:pointer;letter-spacing:0.5px">
+          ✉ Notify
+        </button>
+        <button onclick="openMergeModal('${session.session_id}')"
+          style="flex:1;min-width:80px;padding:7px 10px;background:var(--surface2);border:1px solid var(--border2);border-radius:5px;color:var(--amber2);font-family:var(--mono);font-size:10px;cursor:pointer;letter-spacing:0.5px">
+          ⇒ Merge
+        </button>
+        <button onclick="adminStopSession('${session.session_id}','${esc(session.mosque_name)}')"
+          style="flex:1;min-width:80px;padding:7px 10px;background:transparent;border:1px solid rgba(180,50,50,0.4);border-radius:5px;color:var(--red2);font-family:var(--mono);font-size:10px;cursor:pointer;letter-spacing:0.5px">
+          ✕ Stop
+        </button>
+      </div>
+    </div>` : ''}
+  `;
+}
+
+// ── EVENT LOG ─────────────────────────────────────────────────────────────
+const MAX_LOG = 200;
+
+function addLog(type, text) {
+  const panel = document.getElementById('log-panel');
+  const time  = new Date().toTimeString().split(' ')[0];
+
+  const row = document.createElement('div');
+  row.className = 'log-entry';
+  row.innerHTML = `
+    <span class="log-time">${time}</span>
+    <span class="log-type ${type}">${type}</span>
+    <span class="log-text">${esc(text)}</span>
+  `;
+
+  panel.insertBefore(row, panel.firstChild);
+
+  // Cap log
+  while (panel.children.length > MAX_LOG) panel.lastChild.remove();
+
+  logCount++;
+  document.getElementById('log-count').textContent = logCount;
+}
+
+// ── DEMO DATA ─────────────────────────────────────────────────────────────
+function loadDemoData() {
+  setWsStatus(false);
+  document.getElementById('ws-label').textContent = 'Demo mode';
+  document.getElementById('ws-dot').style.background = 'var(--amber2)';
+
+  const demoSessions = [
+    {
+      session_id: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+      mosque_name: 'Jumeirah Mosque',
+      volunteer_name: 'Abdullah Khalid',
+      lat: 25.2157, lng: 55.2626,
+      state: 'live',
+      listener_count: 47,
+      peak_listeners: 52,
+      segment_count: 18,
+      languages_active: ['en', 'ur', 'fr', 'hi', 'id'],
+      volunteer_signal: 'good',
+      created_at: Date.now() - 900000,
+      duration_seconds: 900,
+    },
+    {
+      session_id: 'b2c3d4e5-f6a7-8901-bcde-f12345678901',
+      mosque_name: 'Al Farooq Omar Mosque',
+      volunteer_name: 'Mohammed Rashid',
+      lat: 25.1862, lng: 55.2524,
+      state: 'live',
+      listener_count: 23,
+      peak_listeners: 30,
+      segment_count: 11,
+      languages_active: ['en', 'ur', 'bn'],
+      volunteer_signal: 'weak',
+      created_at: Date.now() - 660000,
+      duration_seconds: 660,
+    },
+    {
+      session_id: 'c3d4e5f6-a7b8-9012-cdef-012345678902',
+      mosque_name: 'Dubai Islamic Centre',
+      volunteer_name: 'Tariq Hassan',
+      lat: 25.2340, lng: 55.3027,
+      state: 'waiting',
+      listener_count: 8,
+      peak_listeners: 8,
+      segment_count: 0,
+      languages_active: ['en'],
+      volunteer_signal: 'good',
+      created_at: Date.now() - 120000,
+      duration_seconds: 0,
+    },
+    {
+      session_id: 'd4e5f6a7-b8c9-0123-defa-123456789003',
+      mosque_name: 'Masjid Al Salam',
+      volunteer_name: 'Yusuf Ibrahim',
+      lat: 25.2450, lng: 55.3200,
+      state: 'ended',
+      listener_count: 0,
+      peak_listeners: 61,
+      segment_count: 34,
+      languages_active: ['en', 'ur', 'fr', 'hi', 'tr', 'ms'],
+      volunteer_signal: 'good',
+      created_at: Date.now() - 5400000,
+      duration_seconds: 1800,
+    },
+  ];
+
+  updateSessions(demoSessions);
+  selectSession(demoSessions[0].session_id);
+
+  // Seed transcript feeds for demo export
+  const demoTranscripts = [
+    { arabic: 'الحمد لله رب العالمين، والصلاة والسلام على سيدنا محمد', timestamp: Date.now() - 800000 },
+    { arabic: 'أما بعد، فيا عباد الله، اتقوا الله حق تقاته', timestamp: Date.now() - 700000 },
+    { arabic: 'إن الصبر ليس مجرد تحمل الشدائد، بل هو الثقة بأن كل ابتلاء له حكمة عظيمة', timestamp: Date.now() - 600000 },
+    { arabic: 'قال الله تعالى: إن مع العسر يسرا، وإن مع العسر يسرا', timestamp: Date.now() - 500000 },
+    { arabic: 'نسأل الله أن يثبتنا على دينه وأن يجعلنا من عباده الصالحين', timestamp: Date.now() - 400000 },
+  ];
+  transcriptFeeds['a1b2c3d4-e5f6-7890-abcd-ef1234567890'] = demoTranscripts;
+
+  // Seed listener history for sparklines
+  const hist = [12, 18, 25, 31, 40, 44, 47, 43, 47, 51, 52, 49, 47];
+  listenerHistory['a1b2c3d4-e5f6-7890-abcd-ef1234567890'] = hist;
+  listenerHistory['b2c3d4e5-f6a7-8901-bcde-f12345678901'] = [8, 14, 19, 23, 21, 23];
+
+  addLog('info', 'Demo mode active — no live server connection');
+  addLog('join', 'Jumeirah Mosque session started · 47 listeners');
+  addLog('seg',  'Segment #18 translated → EN, UR, FR, HI, ID');
+  addLog('join', 'Al Farooq Mosque session started · 23 listeners');
+  addLog('warn', 'Al Farooq: signal quality degraded → weak');
+  addLog('join', 'Dubai Islamic Centre session waiting');
+  addLog('leave','Masjid Al Salam session ended · 34 segments');
+  addLog('info', 'Server ready on port 8080');
+
+  // Simulate live updates
+  let tick = 0;
+  setInterval(() => {
+    tick++;
+    const liveSession = demoSessions.find(s => s.session_id === 'a1b2c3d4-e5f6-7890-abcd-ef1234567890');
+    if (liveSession) {
+      liveSession.duration_seconds += 5;
+      liveSession.listener_count = 47 + Math.round(Math.sin(tick * 0.3) * 4);
+      if (tick % 10 === 0) {
+        liveSession.segment_count++;
+        addLog('seg', `Segment #${liveSession.segment_count} → ${liveSession.languages_active.join(', ')}`);
+      }
+    }
+    updateSessions([...demoSessions]);
+  }, 5000);
+}
+
+// ── ADMIN ACTIONS ─────────────────────────────────────────────────────────
+
+function adminSend(msg) {
+  if (ws && ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify(msg));
+  } else {
+    addLog('warn', 'Not connected — action skipped');
+  }
+}
+
+function adminStopSession(session_id, mosque_name) {
+  if (!confirm(`Stop session at "${mosque_name}"?\nAll listeners will be disconnected.`)) return;
+  adminSend({ type: 'stop_session', session_id });
+  addLog('warn', `Admin stopped session: ${mosque_name}`);
+}
+
+function adminRefreshSession(session_id) {
+  adminSend({ type: 'refresh_session', session_id });
+  addLog('info', `Refreshed session: ${session_id.substring(0,8)}`);
+}
+
+// ── NOTIFICATION MODAL ────────────────────────────────────────────────────
+let notifSessionId = null;
+let notifType = 'info';
+
+function openNotifModal(session_id, mosque_name) {
+  notifSessionId = session_id || null;
+  const modal = document.getElementById('notif-modal');
+  const label = document.getElementById('notif-scope-label');
+  label.textContent = session_id ? `Sending to: ${mosque_name}` : 'Sending to: all sessions';
+  document.getElementById('notif-message').value = '';
+  setNotifType('info');
+  modal.style.display = 'flex';
+}
+
+function closeNotifModal() {
+  document.getElementById('notif-modal').style.display = 'none';
+}
+
+function setNotifType(type) {
+  notifType = type;
+  ['info','warning','urgent'].forEach(t => {
+    const btn = document.getElementById(`ntype-${t}`);
+    const active = t === type;
+    btn.style.background = active
+      ? (t === 'info' ? 'var(--green)' : t === 'warning' ? 'var(--amber)' : 'var(--red)')
+      : 'var(--surface2)';
+    btn.style.color = active ? (t === 'warning' ? '#000' : '#fff') : 'var(--text2)';
+    btn.style.border = active ? 'none' : '1px solid var(--border2)';
+  });
+}
+
+function sendNotification() {
+  const message = document.getElementById('notif-message').value.trim();
+  if (!message) return;
+  adminSend({ type: 'broadcast_notification', session_id: notifSessionId, message, notif_type: notifType });
+  addLog('info', `Notification sent (${notifType}): "${message.substring(0,40)}"`);
+  closeNotifModal();
+}
+
+// Also add global notify button to topbar (all sessions)
+function openGlobalNotifModal() {
+  openNotifModal(null, null);
+}
+
+// ── MERGE MODAL ───────────────────────────────────────────────────────────
+let mergePresetId = null;
+
+function openMergeModal(preset_id) {
+  mergePresetId = preset_id;
+  const liveSessions = sessions.filter(s => s.state !== 'ended');
+  if (liveSessions.length < 2) {
+    addLog('warn', 'Need at least 2 active sessions to merge');
+    return;
+  }
+
+  const primary   = document.getElementById('merge-primary');
+  const secondary = document.getElementById('merge-secondary');
+  primary.innerHTML   = liveSessions.map(s => `<option value="${s.session_id}">${esc(s.mosque_name)} (${s.listener_count} listeners)</option>`).join('');
+  secondary.innerHTML = liveSessions.map(s => `<option value="${s.session_id}">${esc(s.mosque_name)} (${s.listener_count} listeners)</option>`).join('');
+
+  // Pre-select: preset is secondary, first other is primary
+  if (preset_id) {
+    secondary.value = preset_id;
+    const other = liveSessions.find(s => s.session_id !== preset_id);
+    if (other) primary.value = other.session_id;
+  } else if (liveSessions.length >= 2) {
+    primary.value   = liveSessions[0].session_id;
+    secondary.value = liveSessions[1].session_id;
+  }
+
+  document.getElementById('merge-modal').style.display = 'flex';
+}
+
+function closeMergeModal() {
+  document.getElementById('merge-modal').style.display = 'none';
+}
+
+function confirmMerge() {
+  const primary_id   = document.getElementById('merge-primary').value;
+  const secondary_id = document.getElementById('merge-secondary').value;
+  if (primary_id === secondary_id) {
+    alert('Primary and secondary must be different sessions.');
+    return;
+  }
+  const primaryName   = sessions.find(s => s.session_id === primary_id)?.mosque_name || primary_id;
+  const secondaryName = sessions.find(s => s.session_id === secondary_id)?.mosque_name || secondary_id;
+  if (!confirm(`Merge "${secondaryName}" → "${primaryName}"?\nListeners of ${secondaryName} will be redirected.`)) return;
+  adminSend({ type: 'merge_sessions', primary_id, secondary_id });
+  addLog('info', `Merged: ${secondaryName} → ${primaryName}`);
+  closeMergeModal();
+}
+
+// Close modals on outside click
+document.getElementById('notif-modal').addEventListener('click', e => { if (e.target === e.currentTarget) closeNotifModal(); });
+document.getElementById('merge-modal').addEventListener('click', e => { if (e.target === e.currentTarget) closeMergeModal(); });
+
+// Handle action results from server
+function handleActionResult(msg) {
+  if (msg.ok) {
+    addLog('info', `Action "${msg.action}" succeeded${msg.listeners_notified !== undefined ? ` → ${msg.listeners_notified} listeners` : ''}`);
+  } else {
+    addLog('warn', `Action "${msg.action}" failed`);
+  }
+}
+
+// ── UTILS ─────────────────────────────────────────────────────────────────
+function esc(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function fmtDuration(sec) {
+  if (!sec || sec <= 0) return '—';
+  const m = Math.floor(sec / 60), s = sec % 60;
+  return `${m}:${String(s).padStart(2,'0')}`;
+}
+
+function fmtTime(ts) {
+  if (!ts) return '—';
+  return new Date(ts).toTimeString().split(' ')[0];
+}
+</script>
+</body>
+</html>
