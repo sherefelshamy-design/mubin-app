@@ -1322,35 +1322,44 @@ async function startMicStream() {
     const stream = await navigator.mediaDevices.getUserMedia({ audio: {
       sampleRate: 16000,
       channelCount: 1,
-      echoCancellation: false,
-      noiseSuppression: false,
+      echoCancellation: true,
+      noiseSuppression: true,
       autoGainControl: true,
     }});
 
     state.mediaStream = stream;
 
-    // Waveform analyser
+    // AudioContext at 16kHz — matches AssemblyAI requirement
     const ctx = new AudioContext({ sampleRate: 16000 });
     const src = ctx.createMediaStreamSource(stream);
+
+    // Waveform analyser
     const analyser = ctx.createAnalyser();
     analyser.fftSize = 64;
     src.connect(analyser);
     state.analyser = analyser;
     animateWaveform();
 
-    // Stream audio chunks via MediaRecorder
-    const recorder = new MediaRecorder(stream, { mimeType: 'audio/webm;codecs=opus' });
-    state.mediaRecorder = recorder;
+    // ScriptProcessor captures raw PCM float32 → convert to Int16 → send
+    const bufferSize = 4096;
+    const processor = ctx.createScriptProcessor(bufferSize, 1, 1);
+    src.connect(processor);
+    processor.connect(ctx.destination);
 
-    recorder.ondataavailable = async (ev) => {
-      if (ev.data.size > 0 && state.ws?.readyState === WebSocket.OPEN) {
-        // Convert to ArrayBuffer and send
-        const buf = await ev.data.arrayBuffer();
-        state.ws.send(buf);
+    processor.onaudioprocess = (e) => {
+      if (state.ws?.readyState !== WebSocket.OPEN) return;
+      const float32 = e.inputBuffer.getChannelData(0);
+      // Convert float32 → int16 PCM (what AssemblyAI expects)
+      const int16 = new Int16Array(float32.length);
+      for (let i = 0; i < float32.length; i++) {
+        const s = Math.max(-1, Math.min(1, float32[i]));
+        int16[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
       }
+      state.ws.send(int16.buffer);
     };
 
-    recorder.start(250); // 250ms chunks
+    state.processor = processor;
+    state.audioCtx = ctx;
 
   } catch (err) {
     showToast('Microphone access denied. Please allow mic access and try again.');
@@ -1358,7 +1367,8 @@ async function startMicStream() {
 }
 
 function stopMicStream() {
-  state.mediaRecorder?.stop();
+  state.processor?.disconnect();
+  state.audioCtx?.close();
   state.mediaStream?.getTracks().forEach(t => t.stop());
   cancelAnimationFrame(state.waveAnimFrame);
 }
@@ -1671,6 +1681,9 @@ function addCaptionSegment(text, arabic) {
   // Scroll to bottom
   area.scrollTop = area.scrollHeight;
   captionHistory.push({ text, arabic, timestamp: Date.now() });
+
+  // Speak the new segment if audio is on
+  ttsSpeak(text, state.lang);
 }
 
 function showLivePill() {
@@ -1688,13 +1701,59 @@ function updateDelay(segmentTimestamp) {
 }
 
 // ── AUDIO TOGGLE ──────────────────────────────────────────────────────────────
+// ── TTS (Text-to-Speech) ──────────────────────────────────────────────────────
+const tts = window.speechSynthesis;
+let ttsQueue = [];
+let ttsSpeaking = false;
+
+function ttsSpeak(text, lang) {
+  if (!tts || !state.audioEnabled) return;
+  // Map our lang codes to BCP-47 locales for SpeechSynthesis
+  const locales = {
+    en: 'en-US', ar: 'ar-SA', ur: 'ur-PK', fr: 'fr-FR',
+    hi: 'hi-IN', id: 'id-ID', tr: 'tr-TR', ms: 'ms-MY',
+    bn: 'bn-BD', de: 'de-DE', es: 'es-ES', ru: 'ru-RU', sw: 'sw-KE',
+  };
+  const locale = locales[lang] || 'en-US';
+  const utt = new SpeechSynthesisUtterance(text);
+  utt.lang = locale;
+  utt.rate = 0.9;
+  utt.pitch = 1;
+  utt.onend = () => {
+    ttsSpeaking = false;
+    if (ttsQueue.length > 0) {
+      const next = ttsQueue.shift();
+      ttsSpeaking = true;
+      tts.speak(next);
+    }
+  };
+  if (ttsSpeaking) {
+    // Keep only the latest segment — drop old ones if falling behind
+    ttsQueue = [utt];
+  } else {
+    ttsSpeaking = true;
+    tts.speak(utt);
+  }
+}
+
 function toggleAudio() {
   state.audioEnabled = !state.audioEnabled;
   const track = document.getElementById('audio-toggle-track');
   const label = document.getElementById('audio-label');
   track.classList.toggle('on', state.audioEnabled);
   label.textContent = state.audioEnabled ? 'Audio on' : 'Audio off';
-  // TTS audio playback would be triggered here in production
+
+  if (!state.audioEnabled) {
+    // Stop any ongoing speech
+    tts?.cancel();
+    ttsQueue = [];
+    ttsSpeaking = false;
+  } else if (!tts) {
+    showToast('Audio not supported on this browser');
+    state.audioEnabled = false;
+    track.classList.remove('on');
+    label.textContent = 'Audio off';
+  }
 }
 
 // ── FONT SIZE ─────────────────────────────────────────────────────────────────
