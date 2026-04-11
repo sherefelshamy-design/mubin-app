@@ -1318,59 +1318,73 @@ async function connectVolunteer(url, mosque, name) {
 
 // ── MIC STREAMING ────────────────────────────────────────────────────────────
 async function startMicStream() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) {
+    showToast('Speech recognition not supported. Please use Chrome on Android or Safari on iPhone.');
+    return;
+  }
+
+  const recognition = new SR();
+  recognition.lang = 'ar-SA';
+  recognition.continuous = true;
+  recognition.interimResults = true;
+  recognition.maxAlternatives = 1;
+
+  recognition.onstart = () => {
+    buildWaveform();
+    animateWaveformIdle();
+  };
+
+  recognition.onresult = (event) => {
+    let interim = '';
+    let final = '';
+    for (let i = event.resultIndex; i < event.results.length; i++) {
+      const t = event.results[i][0].transcript;
+      if (event.results[i].isFinal) final += t;
+      else interim += t;
+    }
+    if (interim && state.ws?.readyState === WebSocket.OPEN) {
+      state.ws.send(JSON.stringify({ type: 'partial', text: interim }));
+    }
+    if (final.trim() && state.ws?.readyState === WebSocket.OPEN) {
+      state.ws.send(JSON.stringify({ type: 'transcript', text: final.trim() }));
+    }
+  };
+
+  recognition.onerror = (e) => {
+    if (e.error === 'no-speech') return;
+    if (e.error === 'aborted') return;
+    showToast('Mic error: ' + e.error);
+  };
+
+  recognition.onend = () => {
+    // Auto-restart while session is active
+    if (state.role === 'volunteer' && state.ws?.readyState === WebSocket.OPEN) {
+      try { recognition.start(); } catch (_) {}
+    }
+  };
+
+  state.recognition = recognition;
   try {
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: {
-      sampleRate: 16000,
-      channelCount: 1,
-      echoCancellation: true,
-      noiseSuppression: true,
-      autoGainControl: true,
-    }});
-
-    state.mediaStream = stream;
-
-    // AudioContext at 16kHz — matches AssemblyAI requirement
-    const ctx = new AudioContext({ sampleRate: 16000 });
-    const src = ctx.createMediaStreamSource(stream);
-
-    // Waveform analyser
-    const analyser = ctx.createAnalyser();
-    analyser.fftSize = 64;
-    src.connect(analyser);
-    state.analyser = analyser;
-    animateWaveform();
-
-    // ScriptProcessor captures raw PCM float32 → convert to Int16 → send
-    const bufferSize = 4096;
-    const processor = ctx.createScriptProcessor(bufferSize, 1, 1);
-    src.connect(processor);
-    processor.connect(ctx.destination);
-
-    processor.onaudioprocess = (e) => {
-      if (state.ws?.readyState !== WebSocket.OPEN) return;
-      const float32 = e.inputBuffer.getChannelData(0);
-      // Convert float32 → int16 PCM (what AssemblyAI expects)
-      const int16 = new Int16Array(float32.length);
-      for (let i = 0; i < float32.length; i++) {
-        const s = Math.max(-1, Math.min(1, float32[i]));
-        int16[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
-      }
-      state.ws.send(int16.buffer);
-    };
-
-    state.processor = processor;
-    state.audioCtx = ctx;
-
+    recognition.start();
   } catch (err) {
-    showToast('Microphone access denied. Please allow mic access and try again.');
+    showToast('Could not start speech recognition: ' + err.message);
   }
 }
 
 function stopMicStream() {
-  state.processor?.disconnect();
-  state.audioCtx?.close();
-  state.mediaStream?.getTracks().forEach(t => t.stop());
+  state.recognition?.stop();
+  state.recognition = null;
   cancelAnimationFrame(state.waveAnimFrame);
+}
+
+function animateWaveformIdle() {
+  const bars = document.querySelectorAll('.wave-bar');
+  bars.forEach((b, i) => {
+    const h = 4 + Math.sin(Date.now() / 300 + i * 0.5) * 14;
+    b.style.height = Math.max(4, h) + 'px';
+  });
+  state.waveAnimFrame = requestAnimationFrame(animateWaveformIdle);
 }
 
 // ── WAVEFORM VISUALISER ───────────────────────────────────────────────────────
