@@ -1420,6 +1420,7 @@ function showSignalWarning(level, message) {
   if (level === 'good') el.classList.remove('visible');
   setTimeout(() => el.classList.remove('visible'), 8000);
 }
+
 async function confirmEndSession() {
   if (confirm('End the mic session? All listeners will be disconnected.')) {
     state.ws?.send(JSON.stringify({ type: 'end_session' }));
@@ -1464,23 +1465,93 @@ async function confirmLanguage() {
     const res = await fetch(`${API_URL}/api/session/nearby?lat=${gps.lat}&lng=${gps.lng}`);
     const data = await res.json();
 
-    if (!data.found) {
-      hideConnecting();
-      document.getElementById('caption-mosque-name').textContent = 'No active session nearby';
-      document.getElementById('caption-location').textContent = 'Ask the volunteer to start the session';
-      showToast('No session found within 500m');
+    if (data.found) {
+      connectListener(data.session_id, data.mosque_name);
       return;
     }
 
-    connectListener(data.session_id, data.mosque_name);
+    // No nearby session — fetch all active sessions and show picker
+    hideConnecting();
+    try {
+      const allRes = await fetch(`${API_URL}/api/admin/sessions`);
+      const allData = await allRes.json();
+      const active = (allData.sessions || []).filter(s => s.state !== 'ended');
+
+      if (active.length > 0) {
+        showSessionPicker(active);
+      } else {
+        document.getElementById('caption-mosque-name').textContent = 'No active sessions';
+        document.getElementById('caption-location').textContent = 'No sessions have started yet — check back soon';
+        showToast('No active sessions found');
+      }
+    } catch (_) {
+      document.getElementById('caption-mosque-name').textContent = 'No session nearby';
+      document.getElementById('caption-location').textContent = 'Ask the volunteer to start the session';
+      showToast('No session found');
+    }
 
   } catch (err) {
-    // Demo mode — connect to mock session
     hideConnecting();
     document.getElementById('caption-mosque-name').textContent = 'Demo Mode';
     document.getElementById('caption-location').textContent = 'Mock session (no server)';
     startDemoMode();
   }
+}
+
+function showSessionPicker(sessions) {
+  // Remove existing picker
+  const existing = document.getElementById('session-picker');
+  if (existing) existing.remove();
+
+  const area = document.getElementById('caption-area');
+  document.getElementById('caption-mosque-name').textContent = 'Choose a session';
+  document.getElementById('caption-location').textContent = 'GPS could not auto-detect — pick yours below';
+
+  const picker = document.createElement('div');
+  picker.id = 'session-picker';
+  picker.style.cssText = 'display:flex;flex-direction:column;gap:12px;padding:8px 0';
+
+  sessions.forEach(s => {
+    const card = document.createElement('div');
+    card.style.cssText = `
+      background:var(--forest2);border:1px solid var(--forest3);border-radius:16px;
+      padding:20px 18px;cursor:pointer;transition:all 0.2s;
+    `;
+    card.innerHTML = `
+      <div style="font-family:var(--font-serif);font-size:17px;color:var(--cream);margin-bottom:4px">${esc(s.mosque_name)}</div>
+      <div style="display:flex;gap:12px;align-items:center;margin-top:6px">
+        <span style="font-size:12px;color:var(--text3)">${s.listener_count || 0} listening</span>
+        <span style="font-size:12px;color:var(--text3)">·</span>
+        <span style="font-size:12px;color:var(--text3)">${fmtDurationApp(s.duration_seconds)}</span>
+        <span style="margin-left:auto;font-size:11px;padding:3px 10px;border-radius:20px;background:rgba(82,183,138,0.15);color:var(--emerald)">
+          ${s.state === 'live' ? '● Live' : 'Waiting'}
+        </span>
+      </div>
+    `;
+    card.addEventListener('touchstart', () => card.style.opacity = '0.7');
+    card.addEventListener('touchend',   () => card.style.opacity = '1');
+    card.onclick = () => {
+      picker.remove();
+      document.getElementById('waiting-state').style.display = 'none';
+      showConnecting('Connecting…');
+      connectListener(s.session_id, s.mosque_name);
+    };
+    picker.appendChild(card);
+  });
+
+  // Insert before partial display
+  const partial = document.getElementById('partial-display');
+  area.insertBefore(picker, partial);
+}
+
+function fmtDurationApp(sec) {
+  if (!sec || sec <= 0) return 'just started';
+  const m = Math.floor(sec / 60);
+  return m < 1 ? 'just started' : `${m}m in`;
+}
+
+function esc(s) {
+  return String(s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 }
 
 function getGPS() {
@@ -1531,6 +1602,16 @@ function connectListener(session_id, mosque_name) {
       case 'session_ended':
         hideLivePill();
         showToast('The session has ended');
+        break;
+      case 'admin_notification':
+        showAdminNotification(msg.message, msg.notif_type);
+        break;
+      case 'session_merged':
+        showToast('Sessions merged — reconnecting…');
+        setTimeout(() => connectListener(msg.new_session_id, msg.new_mosque_name), 1500);
+        break;
+      case 'session_refresh':
+        document.getElementById('caption-mosque-name').textContent = msg.mosque_name || 'Mosque';
         break;
       case 'error':
         hideConnecting();
@@ -1630,7 +1711,46 @@ function changeLanguage() {
   showScreen('lang-select');
 }
 
-// ── DEMO MODE (no server) ─────────────────────────────────────────────────────
+// ── ADMIN NOTIFICATION BANNER ─────────────────────────────────────────────────
+function showAdminNotification(message, type = 'info') {
+  // Remove existing
+  const existing = document.getElementById('admin-notif');
+  if (existing) existing.remove();
+
+  const colours = { info: '#2e5e4e', warning: '#b8860b', urgent: '#8b1a1a' };
+  const icons   = { info: 'ℹ️', warning: '⚠️', urgent: '🔴' };
+
+  const el = document.createElement('div');
+  el.id = 'admin-notif';
+  el.style.cssText = `
+    position:fixed;top:0;left:0;right:0;z-index:9999;
+    background:${colours[type] || colours.info};
+    color:#fff;padding:14px 20px 14px 16px;
+    font-family:-apple-system,sans-serif;font-size:14px;line-height:1.5;
+    display:flex;align-items:flex-start;gap:10px;
+    box-shadow:0 2px 12px rgba(0,0,0,0.4);
+    animation:slideDown 0.3s ease forwards;
+  `;
+  el.innerHTML = `
+    <span style="font-size:18px;flex-shrink:0">${icons[type] || icons.info}</span>
+    <span style="flex:1">${message}</span>
+    <span onclick="this.parentNode.remove()" style="cursor:pointer;font-size:18px;opacity:0.7;flex-shrink:0">✕</span>
+  `;
+
+  // Add slide-down animation
+  if (!document.getElementById('admin-notif-style')) {
+    const style = document.createElement('style');
+    style.id = 'admin-notif-style';
+    style.textContent = '@keyframes slideDown{from{transform:translateY(-100%);opacity:0}to{transform:translateY(0);opacity:1}}';
+    document.head.appendChild(style);
+  }
+
+  document.body.prepend(el);
+
+  // Auto-dismiss after 10s for info, 20s for urgent
+  const delay = type === 'urgent' ? 20000 : 10000;
+  setTimeout(() => el.remove(), delay);
+}
 function startDemoMode() {
   showLivePill();
   document.getElementById('caption-location').textContent = 'Demo — live session preview';
